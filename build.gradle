@@ -18,10 +18,6 @@ repositories {
         url = "https://nexus.phoenixdevt.fr/repository/maven-public/"
     }
     maven {
-        name = "phoenix"
-        url = "https://nexus.phoenixdevt.fr/repository/maven-public/"
-    }
-    maven {
         name = "worldGuard"
         url "https://maven.enginehub.org/repo/"
     }
