@@ -1,0 +1,54 @@
+# Prefix hiển thị trước mỗi tin nhắn
+prefix: "<gray>[<gradient:#00FFAA:#00AAFF><bold>SincePet</bold></gradient>] <gray>"
+
+# Các thông báo Admin
+admin:
+  reload: "<green>Đã tải lại cấu hình thành công!"
+  invalid_player: "<red>Người chơi không hợp lệ hoặc không online."
+
+# Các thông báo liên quan đến Pet
+pet:
+  command:
+    spawn: "<green>Bạn đã triệu hồi pet <name><green>!"
+    despawn: "<yellow>Đã thu hồi Pet."
+    ride_success: "<green>Bạn đang cưỡi Pet. Nhảy để xuống."
+    ride_fail: "<red>Bạn chưa gọi Pet nào!"
+    ride_not_allowed: "<red>Pet này không thể cưỡi."
+    levelup_self: "<green>Pet <name> <green>của bạn đã lên cấp <white><level><green>!"
+    levelup_other: "<green>Đã nâng cấp Pet của <yellow><target> <green>lên cấp <white><level><green>."
+    levelup_fail_target: "<red>Người chơi <target> chưa gọi Pet nào."
+
+  # Hiển thị tên trên đầu Pet
+  display:
+    name_format: "<name> <gray>[Lv.<level>]"
+
+  # Giao diện GUI (/pet)
+  gui:
+    title: "<black>Danh sách Pet (Trang <page>)"
+    item_name: "<name>"
+    item_lore:
+      - ""
+      - "<gray>Level hiện tại: <yellow><level>"
+      - "<gray>Stat Bonus: <green>+<value> <stat>"
+      - ""
+      - "<yellow>Click để triệu hồi!"
+
+  # Thông báo WorldGuard (Khi đi vào vùng cấm)
+  worldguard:
+    deny_spawn: "<red>Bạn không thể gọi Pet trong khu vực này!"
+    deny_ride: "<red>Bạn không thể cưỡi Pet trong khu vực này!"
+    auto_despawn: "<red>Pet của bạn đã bị thu hồi do đi vào vùng cấm."
+    auto_dismount: "<red>Bạn bị buộc xuống xe do khu vực này cấm cưỡi."
+
+  # Thông báo trạng thái Flag (Khi đi vào/ra vùng WG có flag)
+  notifications:
+    enter_deny_spawn: "<red>Bạn đã đi vào vùng cấm gọi Pet."
+    leave_deny_spawn: "<green>Bạn đã rời khỏi vùng cấm gọi Pet."
+    enter_deny_ride: "<red>Bạn đã đi vào vùng cấm cưỡi Pet."
+    leave_deny_ride: "<green>Bạn đã rời khỏi vùng cấm cưỡi Pet."
+    enter_deny_fly: "<red>Khu vực này cấm Pet bay."
+    leave_deny_fly: "<green>Bạn có thể bay trở lại."
+    enter_deny_attack: "<red>Pet không thể tấn công ở đây."
+    leave_deny_attack: "<green>Pet có thể tấn công trở lại."
+    enter_deny_buff: "<red>Stat của Pet bị vô hiệu hóa ở đây."
+    leave_deny_buff: "<green>Stat của Pet đã kích hoạt lại."

@@ -1,0 +1,17 @@
+name: SincePet
+version: '1.0'
+main: net.danh.sincePet.SincePet
+api-version: '1.21'
+authors: [ VoChiDanh ]
+dependencies:
+  server:
+    MythicLib:
+      load: BEFORE
+      required: true
+    WorldGuard:
+      load: BEFORE
+      required: true
+permissions:
+  sincepet.admin:
+    description: SincePet Admin permission
+    default: op

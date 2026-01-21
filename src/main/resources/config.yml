@@ -1,0 +1,24 @@
+# ==========================================================
+#                   SincePet Configuration
+# ==========================================================
+
+# Thời gian tự động lưu dữ liệu người chơi (tính bằng giây).
+# Đặt 0 để tắt (không khuyến khích).
+auto-save: 300
+
+# Cấu hình Database (Lưu trữ dữ liệu Pet, Level, v.v.)
+database:
+  # Loại database: "SQLITE" hoặc "MYSQL"
+  # SQLITE: Lưu vào file database.db trong thư mục plugin (Đơn giản, không cần cài đặt).
+  # MYSQL: Lưu vào server MySQL bên ngoài (Tốt cho server lớn hoặc BungeeCord).
+  type: "SQLITE"
+
+  # Các thông số dưới đây chỉ cần thiết nếu type là MYSQL
+  host: "localhost"
+  port: "3306"
+  database: "minecraft"
+  username: "root"
+  password: ""
+  
+  # Tên bảng lưu dữ liệu
+  table_users: "sincepet_users"
