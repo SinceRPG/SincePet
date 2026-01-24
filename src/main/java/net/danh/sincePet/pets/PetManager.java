@@ -7,9 +7,16 @@ import com.sk89q.worldguard.LocalPlayer;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 import com.sk89q.worldguard.protection.flags.StateFlag;
 import com.sk89q.worldguard.protection.regions.RegionQuery;
+import io.lumine.mythic.lib.MythicLib;
+import io.lumine.mythic.lib.UtilityMethods;
 import io.lumine.mythic.lib.api.player.EquipmentSlot;
 import io.lumine.mythic.lib.api.player.MMOPlayerData;
 import io.lumine.mythic.lib.api.stat.modifier.StatModifier;
+import io.lumine.mythic.lib.api.stat.provider.StatProvider;
+import io.lumine.mythic.lib.damage.AttackMetadata;
+import io.lumine.mythic.lib.damage.DamageMetadata;
+import io.lumine.mythic.lib.damage.DamageType;
+import io.lumine.mythic.lib.element.Element;
 import io.lumine.mythic.lib.player.modifier.ModifierSource;
 import io.lumine.mythic.lib.player.modifier.ModifierType;
 import net.danh.sincePet.SincePet;
@@ -30,6 +37,7 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.Nullable;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
@@ -510,22 +518,58 @@ public class PetManager {
     }
 
     private void handleAttack(Player p, ItemDisplay pet, PetData data) {
+        // 1. Check điều kiện cơ bản
         if (!checkFlag(p, WorldGuardHook.PET_ATTACK) || data.range() <= 0) return;
+
+        // 2. Check Cooldown
         long now = System.currentTimeMillis();
         if (now - lastAttackTime.getOrDefault(p.getUniqueId(), 0L) < (long) (data.cooldown() * 1000)) return;
-        LivingEntity target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range()).stream().filter(e -> e instanceof Monster && !e.isDead()).map(e -> (LivingEntity) e).min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation()))).orElse(null);
+
+        // 3. Tìm mục tiêu (Chỉ tìm 1 lần)
+        LivingEntity target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range())
+                .stream()
+                .filter(e -> e instanceof Monster && !e.isDead())
+                .map(e -> (LivingEntity) e)
+                .min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation())))
+                .orElse(null);
+
         if (target != null) {
+            // Tính damage gốc
             int lv = getPetLevel(p, data.id());
             double dmg = Double.parseDouble(Calculator.calculator(data.getDamageFormula().replace("<level>", String.valueOf(lv)), 2));
-            if (data.inheritance() != 1.0) damageModifiers.put(p.getUniqueId(), data.inheritance());
-            target.damage(dmg, p);
-            damageModifiers.remove(p.getUniqueId());
+
+            // ==================== PHẦN SỬA ĐỔI (QUAN TRỌNG) ====================
+            // Mặc định là null (Tương đương với Vật lý / Không có hệ)
+            Element attackElement = null;
+            MMOPlayerData playerData = MMOPlayerData.get(p);
+            String stat = null;
+            // Quét tìm hệ đầu tiên mà người chơi có chỉ số > 0
+            for (Element element : MythicLib.plugin.getElements().getAll()) {
+                stat = UtilityMethods.enumName(element.getId() + "_DAMAGE");
+                if (playerData.getStatMap().getInstance(stat).getTotal() > 0) {
+                    attackElement = element;
+                    break; // Tìm thấy 1 hệ là dừng ngay -> Đánh 1 hit chuẩn hệ đó
+                }
+            }
+            // ===================================================================
+
+            // Tạo gói sát thương
+            // Truyền attackElement (có thể là null hoặc hệ tìm được)
+            DamageMetadata damageMeta = new DamageMetadata(dmg + (playerData.getStatMap().getInstance(stat != null ? stat : "ATTACK_DAMAGE").getTotal() * data.inheritance()), attackElement, DamageType.SKILL, DamageType.PHYSICAL);
+
+            final @Nullable StatProvider damager = StatProvider.get(p, EquipmentSlot.MAIN_HAND, true);
+            MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(damageMeta, target, damager), true);
+
+            // Hiệu ứng & Âm thanh
             Location start = pet.getLocation().add(0, 0.5, 0);
             Location end = target.getEyeLocation();
             Vector dir = end.toVector().subtract(start.toVector()).normalize();
-            for (double i = 0; i < start.distance(end); i += 0.5)
+            double dist = start.distance(end);
+            for (double i = 0; i < dist; i += 0.5) {
                 start.getWorld().spawnParticle(Particle.CRIT, start.clone().add(dir.clone().multiply(i)), 1, 0, 0, 0, 0);
+            }
             p.playSound(start, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.5f, 2f);
+
             lastAttackTime.put(p.getUniqueId(), now);
         }
     }

@@ -47,14 +47,16 @@ public class PlayerDataHandler {
                             // Load Levels
                             String jsonLv = rs.getString("pet_levels");
                             if (jsonLv != null && !jsonLv.isEmpty()) {
-                                Type type = new TypeToken<Map<String, Integer>>() {}.getType();
+                                Type type = new TypeToken<Map<String, Integer>>() {
+                                }.getType();
                                 petLevels = gson.fromJson(jsonLv, type);
                             }
 
                             // Load XP
                             String jsonXp = rs.getString("pet_xp");
                             if (jsonXp != null && !jsonXp.isEmpty()) {
-                                Type type = new TypeToken<Map<String, Double>>() {}.getType();
+                                Type type = new TypeToken<Map<String, Double>>() {
+                                }.getType();
                                 petXp = gson.fromJson(jsonXp, type);
                             }
                         }
@@ -145,17 +147,37 @@ public class PlayerDataHandler {
             this.petXp = xps;
         }
 
-        public String getActivePetId() { return activePetId; }
-        public void setActivePetId(String id) { this.activePetId = id; }
+        public String getActivePetId() {
+            return activePetId;
+        }
 
-        public int getLevel(String petId) { return petLevels.getOrDefault(petId, 1); }
-        public void setLevel(String petId, int level) { petLevels.put(petId, level); }
+        public void setActivePetId(String id) {
+            this.activePetId = id;
+        }
+
+        public int getLevel(String petId) {
+            return petLevels.getOrDefault(petId, 1);
+        }
+
+        public void setLevel(String petId, int level) {
+            petLevels.put(petId, level);
+        }
 
         // XP Methods
-        public double getXp(String petId) { return petXp.getOrDefault(petId, 0.0); }
-        public void setXp(String petId, double xp) { petXp.put(petId, xp); }
+        public double getXp(String petId) {
+            return petXp.getOrDefault(petId, 0.0);
+        }
 
-        public Map<String, Integer> getAllLevels() { return petLevels; }
-        public Map<String, Double> getAllXp() { return petXp; }
+        public void setXp(String petId, double xp) {
+            petXp.put(petId, xp);
+        }
+
+        public Map<String, Integer> getAllLevels() {
+            return petLevels;
+        }
+
+        public Map<String, Double> getAllXp() {
+            return petXp;
+        }
     }
 }
