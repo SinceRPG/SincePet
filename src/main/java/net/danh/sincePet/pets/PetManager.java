@@ -16,8 +16,8 @@ import net.danh.sincePet.SincePet;
 import net.danh.sincePet.data.PetConfig;
 import net.danh.sincePet.data.PlayerDataHandler;
 import net.danh.sincePet.hooks.WorldGuardHook;
+import net.danh.sincePet.utils.Calculator;
 import net.danh.sincePet.utils.ColorUtils;
-import net.danh.sincePet.utils.FormulaUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -43,19 +43,15 @@ public class PetManager {
     private static final double PET_WIDTH = 0.6;
     private static final double PET_HEIGHT = 0.8;
 
-    // Vật lý Đi bộ
+    // Physics Constants
     private static final double GRAVITY = 0.08;
     private static final double JUMP_FORCE = 0.6;
     private static final double MOVE_SPEED_GROUND = 0.45;
     private static final double MAX_STEP_HEIGHT = 1.1;
-
-    // Vật lý Bay (Đã tinh chỉnh cho mượt)
-    private static final double FLY_SPEED = 0.8;       // Tốc độ bay tối đa
-    private static final double FLY_ACCEL = 0.15;      // Gia tốc (độ nhạy khi bấm nút)
-    private static final double FLY_FRICTION = 0.85;   // Độ trượt (giúp dừng lại mượt mà)
-    private static final double FLY_VERTICAL_SPEED = 0.4; // Tốc độ bay lên bằng Space
-
-    // Smoothness
+    private static final double FLY_SPEED = 0.8;
+    private static final double FLY_ACCEL = 0.15;
+    private static final double FLY_FRICTION = 0.85;
+    private static final double FLY_VERTICAL_SPEED = 0.4;
     private static final int TELEPORT_DURATION = 2;
 
     private final SincePet plugin;
@@ -63,7 +59,7 @@ public class PetManager {
     private final Map<UUID, ItemDisplay> activePets = new ConcurrentHashMap<>();
     private final Map<UUID, PetData> activePetData = new ConcurrentHashMap<>();
     private final Map<UUID, float[]> playerInputs = new ConcurrentHashMap<>();
-    private final Map<UUID, Vector> currentVelocity = new ConcurrentHashMap<>(); // Lưu velocity hiện tại để tính quán tính
+    private final Map<UUID, Vector> currentVelocity = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastAttackTime = new ConcurrentHashMap<>();
     private final Map<UUID, Double> damageModifiers = new ConcurrentHashMap<>();
     private final Map<UUID, Map<StateFlag, Boolean>> lastFlagStates = new ConcurrentHashMap<>();
@@ -80,10 +76,6 @@ public class PetManager {
         this.hasWorldGuard = plugin.getWorldGuardHook() != null;
         startPetRunnable();
     }
-
-    // =================================================================
-    //                       PUBLIC API & EVENTS
-    // =================================================================
 
     public PetConfig getPetConfig() {
         return petConfig;
@@ -148,6 +140,10 @@ public class PetManager {
             updatePetName(d, data, level);
         });
 
+        // HIỆU ỨNG SPAWN
+        p.getWorld().spawnParticle(Particle.CLOUD, spawnLoc, 10, 0.2, 0.2, 0.2, 0.05);
+        p.playSound(spawnLoc, Sound.ENTITY_CHICKEN_EGG, 1f, 1f);
+
         activePets.put(p.getUniqueId(), pet);
         activePetData.put(p.getUniqueId(), data);
         currentVelocity.put(p.getUniqueId(), new Vector(0, 0, 0));
@@ -159,7 +155,11 @@ public class PetManager {
     public void removePetVisuals(Player p) {
         UUID id = p.getUniqueId();
         ItemDisplay pet = activePets.remove(id);
-        if (pet != null) pet.remove();
+        if (pet != null) {
+            // HIỆU ỨNG DESPAWN
+            p.getWorld().spawnParticle(Particle.POOF, pet.getLocation(), 5, 0.1, 0.1, 0.1, 0.02);
+            pet.remove();
+        }
         PetData d = activePetData.remove(id);
         if (d != null) applyStat(p, d, false);
 
@@ -236,7 +236,7 @@ public class PetManager {
     private void startPetRunnable() {
         new BukkitRunnable() {
             public void run() {
-                bobbingTick += 0.1;
+                bobbingTick += 0.15; // Tăng tốc độ bobbing nhẹ
                 Iterator<Map.Entry<UUID, ItemDisplay>> it = activePets.entrySet().iterator();
 
                 while (it.hasNext()) {
@@ -254,7 +254,6 @@ public class PetManager {
                     PetData data = activePetData.get(uuid);
                     if (data == null) continue;
 
-                    // WorldGuard Despawn
                     if (!checkFlag(p, WorldGuardHook.PET_SPAWN)) {
                         p.sendMessage(getComp("pet.worldguard.auto_despawn"));
                         cleanupEntry(it, uuid, pet);
@@ -264,71 +263,40 @@ public class PetManager {
                     updateStatStatus(p, data);
                     handleAttack(p, pet, data);
 
-                    // ============================================
-                    //             LOGIC: RIDING (CƯỠI)
-                    // ============================================
+                    // ================= LOGIC: RIDING =================
                     if (pet.getPassengers().contains(p)) {
-
                         if (!checkFlag(p, WorldGuardHook.PET_RIDE)) {
                             p.sendMessage(getComp("pet.worldguard.auto_dismount"));
                             pet.removePassenger(p);
                             continue;
                         }
 
-                        // Input: 0=Forward, 1=Side, 2=Jump
                         float[] i = playerInputs.getOrDefault(uuid, new float[]{0, 0, 0});
                         boolean canFly = data.canFly() && checkFlag(p, WorldGuardHook.PET_FLY);
-
                         Location curLoc = pet.getLocation();
-                        // Đồng bộ Yaw
-                        curLoc.setYaw(p.getLocation().getYaw());
+                        curLoc.setYaw(p.getLocation().getYaw()); // Đồng bộ Yaw
 
-                        // Lấy vận tốc hiện tại (quán tính)
                         Vector velocity = currentVelocity.getOrDefault(uuid, new Vector(0, 0, 0));
 
                         if (canFly) {
-                            // --- CHẾ ĐỘ BAY (Mượt như Creative) ---
-                            curLoc.setPitch(p.getLocation().getPitch()); // Chúi đầu theo hướng nhìn
-
-                            // Tính toán hướng muốn bay tới
+                            curLoc.setPitch(p.getLocation().getPitch());
                             Vector desiredVel = new Vector(0, 0, 0);
-
                             if (i[0] != 0 || i[1] != 0) {
-                                Vector dir = p.getLocation().getDirection().normalize(); // Bay theo hướng nhìn (bao gồm lên xuống)
+                                Vector dir = p.getLocation().getDirection().normalize();
                                 Vector left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
                                 desiredVel = dir.multiply(i[0]).add(left.multiply(i[1])).normalize().multiply(FLY_SPEED);
                             }
+                            if (i[2] > 0) desiredVel.add(new Vector(0, FLY_VERTICAL_SPEED, 0));
 
-                            // Xử lý nút Space để bay lên thẳng đứng (nếu muốn)
-                            if (i[2] > 0) {
-                                desiredVel.add(new Vector(0, FLY_VERTICAL_SPEED, 0));
-                            }
+                            velocity.multiply(FLY_FRICTION);
+                            velocity.add(desiredVel.multiply(FLY_ACCEL));
 
-                            // Áp dụng gia tốc và ma sát (Smoothing)
-                            // Velocity mới = (Velocity cũ * Ma sát) + (Input * Gia tốc)
-                            velocity.multiply(FLY_FRICTION); // Giảm tốc từ từ
-                            velocity.add(desiredVel.multiply(FLY_ACCEL)); // Tăng tốc từ từ
-
-                            // Kiểm tra va chạm khi bay
                             Location target = curLoc.clone().add(velocity);
-                            if (!isCollision(target)) {
-                                curLoc.add(velocity);
-                            } else {
-                                // Nếu va chạm, thử trượt (Slide)
-                                if (!isCollision(curLoc.clone().add(velocity.getX(), 0, 0)))
-                                    curLoc.add(velocity.getX(), 0, 0);
-                                if (!isCollision(curLoc.clone().add(0, velocity.getY(), 0)))
-                                    curLoc.add(0, velocity.getY(), 0);
-                                if (!isCollision(curLoc.clone().add(0, 0, velocity.getZ())))
-                                    curLoc.add(0, 0, velocity.getZ());
-                                // Giảm lực khi va chạm
-                                velocity.multiply(0.5);
-                            }
+                            if (!isCollision(target)) curLoc.add(velocity);
+                            else velocity.multiply(0.5); // Giảm tốc khi va chạm
 
                         } else {
-                            // --- CHẾ ĐỘ ĐI BỘ (Có trọng lực) ---
-                            curLoc.setPitch(0); // Luôn giữ đầu thẳng
-
+                            curLoc.setPitch(0);
                             Vector moveDir = new Vector(0, 0, 0);
                             if (i[0] != 0 || i[1] != 0) {
                                 Vector dir = p.getLocation().getDirection().setY(0).normalize();
@@ -336,47 +304,32 @@ public class PetManager {
                                 moveDir = dir.multiply(i[0]).add(left.multiply(i[1])).normalize().multiply(MOVE_SPEED_GROUND);
                             }
 
-                            // Xử lý Trọng lực & Nhảy
                             double yVel = velocity.getY();
                             boolean touchingGround = isTouchingGround(curLoc);
-
                             if (touchingGround && yVel <= 0) {
                                 yVel = 0;
                                 alignToGround(curLoc);
-                                if (i[2] > 0) yVel = JUMP_FORCE; // Nhảy
+                                if (i[2] > 0) yVel = JUMP_FORCE;
                             } else {
                                 yVel -= GRAVITY;
                                 if (yVel < -1.5) yVel = -1.5;
                             }
-
-                            // Check cụng đầu
-                            if (!touchingGround && yVel > 0) {
-                                if (isCollision(curLoc.clone().add(0, yVel, 0))) yVel = 0;
-                            }
+                            if (!touchingGround && yVel > 0 && isCollision(curLoc.clone().add(0, yVel, 0))) yVel = 0;
 
                             velocity.setX(moveDir.getX());
                             velocity.setZ(moveDir.getZ());
                             velocity.setY(yVel);
 
-                            // Di chuyển trục Y
                             curLoc.add(0, velocity.getY(), 0);
-
-                            // Di chuyển trục X, Z (Có xử lý leo bậc thang)
                             moveAxis(curLoc, new Vector(velocity.getX(), 0, 0), touchingGround);
                             moveAxis(curLoc, new Vector(0, 0, velocity.getZ()), touchingGround);
                         }
-
-                        // Lưu lại velocity cho tick sau
                         currentVelocity.put(uuid, velocity);
-
-                        // Teleport
                         pet.setTeleportDuration(TELEPORT_DURATION);
                         pet.teleport(curLoc);
 
                     } else {
-                        // ============================================
-                        //             LOGIC: FOLLOWING (ĐI THEO)
-                        // ============================================
+                        // ================= LOGIC: FOLLOWING =================
                         handleFollowLogic(p, pet, uuid.hashCode());
                     }
                 }
@@ -384,17 +337,57 @@ public class PetManager {
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
-    // --- Helpers cho Physics ---
+    private void handleFollowLogic(Player p, ItemDisplay pet, int seed) {
+        playerInputs.remove(p.getUniqueId());
+        currentVelocity.remove(p.getUniqueId());
 
+        Location targetPos = getFollowTarget(p, seed);
+        Location currentPos = pet.getLocation();
+        double distSq = currentPos.distanceSquared(targetPos);
+
+        // Logic: Xoay đầu nhìn về phía chủ (hoặc hướng di chuyển)
+        Location pLoc = p.getLocation();
+        if (distSq > 0.1) {
+            Vector dir = pLoc.toVector().subtract(currentPos.toVector()).normalize();
+            float targetYaw = (float) Math.toDegrees(Math.atan2(-dir.getX(), dir.getZ()));
+            float newYaw = lerpYaw(currentPos.getYaw(), targetYaw, 0.15f);
+            currentPos.setYaw(newYaw);
+        }
+
+        if (distSq > 400) {
+            pet.setTeleportDuration(0);
+            pet.teleport(targetPos);
+        } else if (distSq > 0.5) {
+            Vector dir = targetPos.toVector().subtract(currentPos.toVector());
+            currentPos.add(dir.multiply(0.15));
+
+            // Hiệu ứng nhấp nhô khi bay/đi
+            double hover = Math.sin(bobbingTick + seed) * 0.05;
+            currentPos.add(0, hover, 0);
+
+            pet.setTeleportDuration(TELEPORT_DURATION);
+            pet.teleport(currentPos);
+        } else {
+            // Đứng yên: Nhìn theo hướng chủ + Nhấp nhô
+            float targetYaw = p.getLocation().getYaw();
+            if (Math.abs(currentPos.getYaw() - targetYaw) > 1) {
+                currentPos.setYaw(lerpYaw(currentPos.getYaw(), targetYaw, 0.1f));
+            }
+            double hover = Math.sin(bobbingTick + seed) * 0.03; // Nhấp nhô nhẹ hơn khi đứng
+            currentPos.add(0, hover, 0);
+
+            pet.setTeleportDuration(2);
+            pet.teleport(currentPos);
+        }
+    }
+
+    // Các helper function khác (moveAxis, getFollowTarget, lerpYaw, collision...) GIỮ NGUYÊN
     private void moveAxis(Location loc, Vector vel, boolean onGround) {
         if (Math.abs(vel.getX()) < 0.001 && Math.abs(vel.getZ()) < 0.001) return;
-
         Location target = loc.clone().add(vel);
-
         if (!isCollision(target)) {
             loc.add(vel);
         } else if (onGround) {
-            // Step Assist: Thử leo lên
             for (double h = 0.5; h <= MAX_STEP_HEIGHT; h += 0.5) {
                 Location stepHigh = target.clone().add(0, h, 0);
                 if (!isCollision(stepHigh) && !isCollision(stepHigh.clone().add(0, 1, 0))) {
@@ -405,51 +398,13 @@ public class PetManager {
         }
     }
 
-    private void handleFollowLogic(Player p, ItemDisplay pet, int seed) {
-        playerInputs.remove(p.getUniqueId());
-        currentVelocity.remove(p.getUniqueId()); // Reset quán tính khi không cưỡi
-
-        Location targetPos = getFollowTarget(p, seed);
-        Location currentPos = pet.getLocation();
-        double distSq = currentPos.distanceSquared(targetPos);
-
-        if (distSq > 400) {
-            pet.setTeleportDuration(0);
-            pet.teleport(targetPos);
-        } else if (distSq > 0.5) {
-            Vector dir = targetPos.toVector().subtract(currentPos.toVector());
-            currentPos.add(dir.multiply(0.15)); // Lerp position
-
-            float targetYaw = p.getLocation().getYaw();
-            currentPos.setYaw(lerpYaw(currentPos.getYaw(), targetYaw, 0.2f)); // Lerp Yaw
-
-            pet.setTeleportDuration(TELEPORT_DURATION);
-            pet.teleport(currentPos);
-        } else {
-            float targetYaw = p.getLocation().getYaw();
-            if (Math.abs(currentPos.getYaw() - targetYaw) > 1) {
-                currentPos.setYaw(lerpYaw(currentPos.getYaw(), targetYaw, 0.1f));
-                pet.setTeleportDuration(TELEPORT_DURATION);
-                pet.teleport(currentPos);
-            }
-        }
-    }
-
     private Location getFollowTarget(Player p, int seed) {
         Location pLoc = p.getLocation();
-        Location pEye = p.getEyeLocation(); // Dùng EyeLocation làm gốc
-
+        Location pEye = p.getEyeLocation();
         Vector dir = pLoc.getDirection().setY(0).normalize();
         Vector left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
-
-        double b = Math.sin(bobbingTick + seed) * 0.1; // Bobbing nhẹ hơn
-
-        // Vị trí: Bên trái/phải, lùi lại xíu, ngang tầm vai/đầu (EyeLocation + 0.3)
-        Location target = pEye.clone()
-                .add(left.multiply(1.0)) // Cách sang bên 1 block
-                .subtract(dir.multiply(0.3)) // Lùi lại 0.3
-                .add(0, b + 0.3, 0); // Cao hơn mắt một chút (bay ngang đầu)
-
+        double b = Math.sin(bobbingTick + seed) * 0.1;
+        Location target = pEye.clone().add(left.multiply(1.0)).subtract(dir.multiply(0.3)).add(0, b - 0.2, 0);
         target.setYaw(pLoc.getYaw());
         return target;
     }
@@ -460,8 +415,6 @@ public class PetManager {
         while (diff > 180) diff -= 360;
         return current + diff * alpha;
     }
-
-    // --- Helpers: Collision & Ground Detection ---
 
     private boolean isTouchingGround(Location loc) {
         BoundingBox box = BoundingBox.of(loc, PET_WIDTH / 2, 0.1, PET_WIDTH / 2);
@@ -482,7 +435,6 @@ public class PetManager {
         int maxY = (int) Math.ceil(box.getMaxY());
         int minZ = (int) Math.floor(box.getMinZ());
         int maxZ = (int) Math.ceil(box.getMaxZ());
-
         for (int x = minX; x < maxX; x++) {
             for (int y = minY; y < maxY; y++) {
                 for (int z = minZ; z < maxZ; z++) {
@@ -497,16 +449,8 @@ public class PetManager {
     }
 
     private void alignToGround(Location loc) {
-        RayTraceResult res = loc.getWorld().rayTraceBlocks(
-                loc.clone().add(0, 0.5, 0),
-                new Vector(0, -1, 0),
-                SEAT_OFFSET + 1.0,
-                FluidCollisionMode.NEVER,
-                true
-        );
-        if (res != null && res.getHitPosition() != null) {
-            loc.setY(res.getHitPosition().getY() + SEAT_OFFSET);
-        }
+        RayTraceResult res = loc.getWorld().rayTraceBlocks(loc.clone().add(0, 0.5, 0), new Vector(0, -1, 0), SEAT_OFFSET + 1.0, FluidCollisionMode.NEVER, true);
+        if (res != null && res.getHitPosition() != null) loc.setY(res.getHitPosition().getY() + SEAT_OFFSET);
     }
 
     private void cleanupEntry(Iterator<Map.Entry<UUID, ItemDisplay>> it, UUID uuid, ItemDisplay pet) {
@@ -521,10 +465,6 @@ public class PetManager {
         it.remove();
     }
 
-    // =================================================================
-    //                       UTILITIES & MESSAGES
-    // =================================================================
-
     private String getMsg(String path) {
         return plugin.getPetMessagesFile().getString(path);
     }
@@ -534,6 +474,7 @@ public class PetManager {
     }
 
     private void updatePetName(ItemDisplay d, PetData data, int lv) {
+        // CHỈNH SỬA: Dùng key từ messages.yml
         d.customName(ColorUtils.parse(getMsg("pet.display.name_format").replace("<name>", data.name()).replace("<level>", String.valueOf(lv))));
     }
 
@@ -558,7 +499,7 @@ public class PetManager {
             String k = "sincepet_bonus";
             if (add) {
                 int lv = getPetLevel(p, d.id());
-                double v = FormulaUtils.eval(d.formula().replace("<level>", String.valueOf(lv)));
+                double v = Double.parseDouble(Calculator.calculator(d.formula().replace("<level>", String.valueOf(lv)), 2));
                 new StatModifier(k, d.stat(), v, ModifierType.FLAT, EquipmentSlot.OTHER, ModifierSource.OTHER).register(pd);
             } else {
                 var i = pd.getStatMap().getInstance(d.stat());
@@ -569,27 +510,22 @@ public class PetManager {
     }
 
     private void handleAttack(Player p, ItemDisplay pet, PetData data) {
-        if (!checkFlag(p, WorldGuardHook.PET_ATTACK)) return;
-        if (data.range() <= 0) return;
+        if (!checkFlag(p, WorldGuardHook.PET_ATTACK) || data.range() <= 0) return;
         long now = System.currentTimeMillis();
         if (now - lastAttackTime.getOrDefault(p.getUniqueId(), 0L) < (long) (data.cooldown() * 1000)) return;
-
         LivingEntity target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range()).stream().filter(e -> e instanceof Monster && !e.isDead()).map(e -> (LivingEntity) e).min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation()))).orElse(null);
-
         if (target != null) {
             int lv = getPetLevel(p, data.id());
-            double dmg = FormulaUtils.eval(data.getDamageFormula().replace("<level>", String.valueOf(lv)));
+            double dmg = Double.parseDouble(Calculator.calculator(data.getDamageFormula().replace("<level>", String.valueOf(lv)), 2));
             if (data.inheritance() != 1.0) damageModifiers.put(p.getUniqueId(), data.inheritance());
             target.damage(dmg, p);
             damageModifiers.remove(p.getUniqueId());
-
             Location start = pet.getLocation().add(0, 0.5, 0);
             Location end = target.getEyeLocation();
             Vector dir = end.toVector().subtract(start.toVector()).normalize();
             for (double i = 0; i < start.distance(end); i += 0.5)
                 start.getWorld().spawnParticle(Particle.CRIT, start.clone().add(dir.clone().multiply(i)), 1, 0, 0, 0, 0);
             p.playSound(start, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.5f, 2f);
-
             lastAttackTime.put(p.getUniqueId(), now);
         }
     }
@@ -607,7 +543,6 @@ public class PetManager {
         UUID uuid = p.getUniqueId();
         lastFlagStates.putIfAbsent(uuid, new HashMap<>());
         Map<StateFlag, Boolean> states = lastFlagStates.get(uuid);
-
         checkSingleFlagNotify(p, states, WorldGuardHook.PET_SPAWN, "spawn");
         checkSingleFlagNotify(p, states, WorldGuardHook.PET_RIDE, "ride");
         checkSingleFlagNotify(p, states, WorldGuardHook.PET_FLY, "fly");
@@ -637,5 +572,41 @@ public class PetManager {
         meta.setPlayerProfile(profile);
         item.setItemMeta(meta);
         return item;
+    }
+
+    public void addExp(Player p, double amount) {
+        PlayerDataHandler.PlayerSession s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        if (s == null || s.getActivePetId() == null) return;
+
+        String petId = s.getActivePetId();
+        PetData data = activePetData.get(p.getUniqueId());
+        if (data == null) return;
+
+        double currentXp = s.getXp(petId);
+        double newXp = currentXp + amount;
+        int currentLevel = s.getLevel(petId);
+
+        // Tính Max XP
+        double maxXp = Double.parseDouble(Calculator.calculator(data.getMaxXpFormula().replace("<level>", String.valueOf(currentLevel)), 2));
+
+        // Level Up Logic (Dùng WHILE để hỗ trợ thăng nhiều cấp)
+        while (newXp >= maxXp) {
+            newXp -= maxXp;
+            levelUp(p, p);
+
+            // Cập nhật lại Level và MaxXP cho vòng lặp tiếp theo
+            currentLevel++;
+            maxXp = Double.parseDouble(Calculator.calculator(data.getMaxXpFormula().replace("<level>", String.valueOf(currentLevel)), 2));
+        }
+
+        s.setXp(petId, newXp);
+
+        // CHỈNH SỬA: Sử dụng messages.yml cho Actionbar
+        String xpMsg = getMsg("pet.level.xp_actionbar")
+                .replace("<amount>", String.format("%.1f", amount))
+                .replace("<current_xp>", String.format("%.1f", newXp))
+                .replace("<max_xp>", String.format("%.1f", maxXp));
+
+        p.sendActionBar(ColorUtils.parse(xpMsg));
     }
 }

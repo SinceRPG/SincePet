@@ -7,6 +7,7 @@ import net.danh.sincePet.data.DatabaseManager;
 import net.danh.sincePet.data.PlayerDataHandler;
 import net.danh.sincePet.events.JoinQuit;
 import net.danh.sincePet.hooks.WorldGuardHook;
+import net.danh.sincePet.mythic.MythicDropRegister;
 import net.danh.sincePet.pets.PetGUI;
 import net.danh.sincePet.pets.PetListener;
 import net.danh.sincePet.pets.PetManager;
@@ -64,6 +65,10 @@ public final class SincePet extends JavaPlugin {
         // 3. Register Listeners
         getServer().getPluginManager().registerEvents(new PetListener(this), this);
         getServer().getPluginManager().registerEvents(new JoinQuit(this), this);
+        if (getServer().getPluginManager().isPluginEnabled("MythicMobs")) {
+            getServer().getPluginManager().registerEvents(new MythicDropRegister(), this);
+            getLogger().info("Hooked into MythicMobs Drops (pet-xp)!");
+        }
 
         // 4. Register Commands
         registerCommands();
@@ -76,10 +81,14 @@ public final class SincePet extends JavaPlugin {
     public void onDisable() {
         Bukkit.getScheduler().cancelTasks(this);
         if (petManager != null) petManager.disable();
+
+        // Save dữ liệu Sync khi tắt server
         if (playerDataHandler != null) {
             getLogger().info("Saving player data...");
             playerDataHandler.saveAllSync();
         }
+
+        // Đóng database
         if (databaseManager != null) databaseManager.close();
     }
 
@@ -87,12 +96,18 @@ public final class SincePet extends JavaPlugin {
         configFile.reload();
         petGuiFile.reload();
         petMessagesFile.reload();
+
+        // CHỈNH SỬA: Reload Database an toàn
+        if (databaseManager != null) {
+            databaseManager.close();
+            databaseManager = new DatabaseManager(this);
+        }
+
         if (petManager != null) petManager.reload();
     }
 
     private void registerCommands() {
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
-
             // Lệnh /pet (Mở GUI)
             event.registrar().register(Commands.literal("pet")
                     .executes(ctx -> {

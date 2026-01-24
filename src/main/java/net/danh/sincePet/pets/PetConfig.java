@@ -10,47 +10,51 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PetConfig {
-    private final Map<String, PetData> loadedPets = new HashMap<>();
-    private final ConfigUtils petFile;
+    private final SincePet plugin;
+    private final Map<String, PetData> pets = new HashMap<>();
 
     public PetConfig(SincePet plugin) {
-        this.petFile = new ConfigUtils(plugin, "pets.yml");
+        this.plugin = plugin;
         loadPets();
     }
 
     public void loadPets() {
-        loadedPets.clear();
-        petFile.reload();
-        ConfigurationSection sec = petFile.getConfig().getConfigurationSection("pets");
-        if (sec == null) return;
-        for (String key : sec.getKeys(false)) {
-            try {
-                String p = "pets." + key + ".";
-                String n = petFile.getString(p + "name");
-                String t = petFile.getString(p + "texture");
-                String s = petFile.getString(p + "stat");
-                String f = petFile.getString(p + "formula");
+        pets.clear();
+        ConfigUtils config = new ConfigUtils(plugin, "pets.yml");
+        ConfigurationSection section = config.getConfig().getConfigurationSection("pets");
+        if (section == null) return;
 
-                double r = petFile.getConfig().getDouble(p + "attack.range", 0);
-                double c = petFile.getConfig().getDouble(p + "attack.cooldown", 2.0);
-                String df = petFile.getString(p + "attack.damage_formula", "0");
-                double inh = petFile.getConfig().getDouble(p + "attack.inheritance", 1.0);
+        for (String key : section.getKeys(false)) {
+            String path = key + ".";
 
-                boolean rideable = petFile.getConfig().getBoolean(p + "ride.enabled", true);
-                boolean canFly = petFile.getConfig().getBoolean(p + "ride.can_fly", true);
+            // Thông tin chung
+            String name = section.getString(path + "name");
+            String texture = section.getString(path + "texture");
+            String stat = section.getString(path + "stat");
+            String formula = section.getString(path + "formula");
 
-                loadedPets.put(key, new PetData(key, n, t, s, f, r, c, df, inh, rideable, canFly));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            // Đọc từ mục 'attack'
+            double range = section.getDouble(path + "attack.range", 0);
+            double cooldown = section.getDouble(path + "attack.cooldown", 2.0);
+            String dmgFormula = section.getString(path + "attack.damage_formula", "0");
+            double inheritance = section.getDouble(path + "attack.inheritance", 1.0);
+
+            // Đọc từ mục 'ride'
+            boolean rideable = section.getBoolean(path + "ride.enabled", false);
+            boolean canFly = section.getBoolean(path + "ride.can_fly", false);
+
+            // XP (Mới thêm)
+            String maxXpFormula = section.getString(path + "max_xp_formula", "100 * <level>");
+
+            pets.put(key, new PetData(key, name, texture, stat, formula, range, cooldown, dmgFormula, inheritance, rideable, canFly, maxXpFormula));
         }
     }
 
     public PetData getPet(String id) {
-        return loadedPets.get(id);
+        return pets.get(id);
     }
 
     public Collection<PetData> getAllPets() {
-        return loadedPets.values();
+        return pets.values();
     }
 }

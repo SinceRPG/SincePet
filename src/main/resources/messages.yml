@@ -1,54 +1,64 @@
-# Prefix hiển thị trước mỗi tin nhắn
-prefix: "<gray>[<gradient:#00FFAA:#00AAFF><bold>SincePet</bold></gradient>] <gray>"
+# =====================================================
+#               SINCE PET - MESSAGES
+# =====================================================
+# Hỗ trợ mã màu & (Legacy) và MiniMessage (<green>, <red>, ...)
+# Dùng <gradient:red:blue>Text</gradient> để tạo màu gradient.
 
-# Các thông báo Admin
+prefix: "<gray>[<gradient:#00FFAE:#00E0FF><bold>SincePet</bold></gradient><gray>] "
+
 admin:
   reload: "<green>Đã tải lại cấu hình thành công!"
-  invalid_player: "<red>Người chơi không hợp lệ hoặc không online."
+  no_permission: "<red>Bạn không có quyền sử dụng lệnh này."
 
-# Các thông báo liên quan đến Pet
 pet:
   command:
-    spawn: "<green>Bạn đã triệu hồi pet <name><green>!"
+    spawn: "<green>Đã triệu hồi <name><green>!"
     despawn: "<yellow>Đã thu hồi Pet."
-    ride_success: "<green>Bạn đang cưỡi Pet. Nhảy để xuống."
-    ride_fail: "<red>Bạn chưa gọi Pet nào!"
-    ride_not_allowed: "<red>Pet này không thể cưỡi."
-    levelup_self: "<green>Pet <name> <green>của bạn đã lên cấp <white><level><green>!"
-    levelup_other: "<green>Đã nâng cấp Pet của <yellow><target> <green>lên cấp <white><level><green>."
-    levelup_fail_target: "<red>Người chơi <target> chưa gọi Pet nào."
+    ride_success: "<green>Đang cưỡi Pet! Nhấn SHIFT để xuống."
+    ride_fail: "<red>Bạn chưa triệu hồi Pet nào!"
+    ride_not_allowed: "<red>Pet này không cưỡi được!"
+    levelup_self: "<gold>Chúc mừng! <name> <gold>đã lên cấp <green><level><gold>!"
+    levelup_other: "<green>Đã thăng cấp cho Pet của <target> lên cấp <level>."
+    levelup_fail_target: "<red>Người chơi <target> không có Pet nào đang hoạt động."
 
-  # Hiển thị tên trên đầu Pet
+  level:
+    # Actionbar hiển thị khi Pet nhận XP
+    # Placeholder: <amount>, <current_xp>, <max_xp>
+    xp_actionbar: "<green>+ <amount> XP <gray>(<current_xp>/<max_xp>)"
+
   display:
+    # Tên hiển thị trên đầu Pet
     name_format: "<name> <gray>[Lv.<level>]"
 
-  # Giao diện GUI (/pet)
   gui:
-    title: "<black>Danh sách Pet (Trang <page>)"
+    title: "<black><bold>Pet Collection <gray>(Trang <page>)"
     item_name: "<name>"
+    status_unlocked: "<green>Đã sở hữu"
+    status_locked: "<red>Chưa mở khóa"
     item_lore:
       - ""
-      - "<gray>Level hiện tại: <yellow><level>"
-      - "<gray>Stat Bonus: <green>+<value> <stat>"
+      - " <gray>Cấp độ: <white><level>"
+      - " <gray>Chỉ số: <green>+<value> <stat>"
+      - " <gray>Kế thừa DMG: <green><inheritance>%"
+      - ""
+      - " <gray>Trạng thái: <status>"
       - ""
       - "<yellow>Click để triệu hồi!"
 
-  # Thông báo WorldGuard (Khi đi vào vùng cấm)
   worldguard:
-    deny_spawn: "<red>Bạn không thể gọi Pet trong khu vực này!"
-    deny_ride: "<red>Bạn không thể cưỡi Pet trong khu vực này!"
-    auto_despawn: "<red>Pet của bạn đã bị thu hồi do đi vào vùng cấm."
-    auto_dismount: "<red>Bạn bị buộc xuống xe do khu vực này cấm cưỡi."
+    deny_spawn: "<red>Bạn không thể triệu hồi Pet ở khu vực này!"
+    deny_ride: "<red>Khu vực này cấm cưỡi Pet!"
+    auto_despawn: "<red>Pet của bạn đã bị thu hồi do đi vào khu vực cấm!"
+    auto_dismount: "<red>Bạn bị buộc xuống xe do đi vào khu vực cấm cưỡi!"
 
-  # Thông báo trạng thái Flag (Khi đi vào/ra vùng WG có flag)
   notifications:
-    enter_deny_spawn: "<red>Bạn đã đi vào vùng cấm gọi Pet."
-    leave_deny_spawn: "<green>Bạn đã rời khỏi vùng cấm gọi Pet."
-    enter_deny_ride: "<red>Bạn đã đi vào vùng cấm cưỡi Pet."
-    leave_deny_ride: "<green>Bạn đã rời khỏi vùng cấm cưỡi Pet."
-    enter_deny_fly: "<red>Khu vực này cấm Pet bay."
-    leave_deny_fly: "<green>Bạn có thể bay trở lại."
-    enter_deny_attack: "<red>Pet không thể tấn công ở đây."
-    leave_deny_attack: "<green>Pet có thể tấn công trở lại."
-    enter_deny_buff: "<red>Stat của Pet bị vô hiệu hóa ở đây."
-    leave_deny_buff: "<green>Stat của Pet đã kích hoạt lại."
+    enter_deny_spawn: "<red>Bạn đã đi vào khu vực cấm Pet!"
+    leave_deny_spawn: "<green>Bạn đã rời khỏi khu vực cấm Pet."
+    enter_deny_ride: "<red>Bạn đã đi vào khu vực cấm cưỡi Pet!"
+    leave_deny_ride: "<green>Bạn được phép cưỡi Pet trở lại."
+    enter_deny_fly: "<red>Pet của bạn bị mất khả năng bay ở đây!"
+    leave_deny_fly: "<green>Pet có thể bay trở lại."
+    enter_deny_attack: "<red>Pet sẽ không tấn công ở khu vực này."
+    leave_deny_attack: "<green>Pet đã sẵn sàng chiến đấu."
+    enter_deny_buff: "<red>Hiệu ứng Pet bị vô hiệu hóa tại đây."
+    leave_deny_buff: "<green>Hiệu ứng Pet đã kích hoạt lại."

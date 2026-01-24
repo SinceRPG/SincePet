@@ -8,6 +8,9 @@ dependencies:
     MythicLib:
       load: BEFORE
       required: true
+    MythicMobs:
+      load: BEFORE
+      required: true
     WorldGuard:
       load: BEFORE
       required: true

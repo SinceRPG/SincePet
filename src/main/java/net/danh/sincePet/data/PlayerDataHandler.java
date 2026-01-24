@@ -29,9 +29,12 @@ public class PlayerDataHandler {
 
     public void loadData(@NotNull Player p) {
         UUID uuid = p.getUniqueId();
+        if (sessionMap.containsKey(uuid)) return;
+
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             String petId = null;
             Map<String, Integer> petLevels = new HashMap<>();
+            Map<String, Double> petXp = new HashMap<>(); // Map XP
 
             try (Connection conn = plugin.getDatabaseManager().getConnection()) {
                 String query = "SELECT * FROM " + plugin.getDatabaseManager().getUsersTable() + " WHERE uuid = ?";
@@ -40,11 +43,19 @@ public class PlayerDataHandler {
                     try (ResultSet rs = ps.executeQuery()) {
                         if (rs.next()) {
                             petId = rs.getString("active_pet");
-                            String json = rs.getString("pet_levels");
-                            if (json != null && !json.isEmpty()) {
-                                Type type = new TypeToken<Map<String, Integer>>() {
-                                }.getType();
-                                petLevels = gson.fromJson(json, type);
+
+                            // Load Levels
+                            String jsonLv = rs.getString("pet_levels");
+                            if (jsonLv != null && !jsonLv.isEmpty()) {
+                                Type type = new TypeToken<Map<String, Integer>>() {}.getType();
+                                petLevels = gson.fromJson(jsonLv, type);
+                            }
+
+                            // Load XP
+                            String jsonXp = rs.getString("pet_xp");
+                            if (jsonXp != null && !jsonXp.isEmpty()) {
+                                Type type = new TypeToken<Map<String, Double>>() {}.getType();
+                                petXp = gson.fromJson(jsonXp, type);
                             }
                         }
                     }
@@ -55,10 +66,11 @@ public class PlayerDataHandler {
 
             String finalPetId = petId;
             Map<String, Integer> finalPetLevels = (petLevels != null) ? petLevels : new HashMap<>();
+            Map<String, Double> finalPetXp = (petXp != null) ? petXp : new HashMap<>();
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (p.isOnline()) {
-                    sessionMap.put(uuid, new PlayerSession(finalPetId, finalPetLevels));
+                if (p.isOnline() && !sessionMap.containsKey(uuid)) {
+                    sessionMap.put(uuid, new PlayerSession(finalPetId, finalPetLevels, finalPetXp));
                 }
             });
         });
@@ -67,20 +79,22 @@ public class PlayerDataHandler {
     public void saveData(UUID uuid, boolean removeDataFromMemory) {
         if (!sessionMap.containsKey(uuid)) return;
         PlayerSession session = sessionMap.get(uuid);
-        String activePet = session.getActivePetId();
-        String jsonLevels = gson.toJson(session.getAllLevels());
+        final String activePet = session.getActivePetId();
+        final String jsonLevels = gson.toJson(session.getAllLevels());
+        final String jsonXp = gson.toJson(session.getAllXp()); // Save XP JSON
 
         if (removeDataFromMemory) sessionMap.remove(uuid);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try (Connection conn = plugin.getDatabaseManager().getConnection()) {
                 String upsert = plugin.getDatabaseManager().isMySQL()
-                        ? "INSERT INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE active_pet=VALUES(active_pet), pet_levels=VALUES(pet_levels)"
-                        : "INSERT OR REPLACE INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels) VALUES (?, ?, ?)";
+                        ? "INSERT INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE active_pet=VALUES(active_pet), pet_levels=VALUES(pet_levels), pet_xp=VALUES(pet_xp)"
+                        : "INSERT OR REPLACE INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp) VALUES (?, ?, ?, ?)";
                 try (PreparedStatement ps = conn.prepareStatement(upsert)) {
                     ps.setString(1, uuid.toString());
                     ps.setString(2, activePet);
                     ps.setString(3, jsonLevels);
+                    ps.setString(4, jsonXp);
                     ps.executeUpdate();
                 }
             } catch (SQLException e) {
@@ -89,18 +103,21 @@ public class PlayerDataHandler {
         });
     }
 
+    // saveAllSync và saveAllAsync tương tự, nhớ thêm tham số jsonXp vào SQL
+
     public void saveAllSync() {
         for (UUID uuid : new HashSet<>(sessionMap.keySet())) {
             PlayerSession session = sessionMap.get(uuid);
             if (session == null) continue;
             try (Connection conn = plugin.getDatabaseManager().getConnection()) {
                 String upsert = plugin.getDatabaseManager().isMySQL()
-                        ? "INSERT INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE active_pet=VALUES(active_pet), pet_levels=VALUES(pet_levels)"
-                        : "INSERT OR REPLACE INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels) VALUES (?, ?, ?)";
+                        ? "INSERT INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE active_pet=VALUES(active_pet), pet_levels=VALUES(pet_levels), pet_xp=VALUES(pet_xp)"
+                        : "INSERT OR REPLACE INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp) VALUES (?, ?, ?, ?)";
                 try (PreparedStatement ps = conn.prepareStatement(upsert)) {
                     ps.setString(1, uuid.toString());
                     ps.setString(2, session.getActivePetId());
                     ps.setString(3, gson.toJson(session.getAllLevels()));
+                    ps.setString(4, gson.toJson(session.getAllXp()));
                     ps.executeUpdate();
                 }
             } catch (SQLException e) {
@@ -119,31 +136,26 @@ public class PlayerDataHandler {
 
     public static class PlayerSession {
         private final Map<String, Integer> petLevels;
+        private final Map<String, Double> petXp; // Map XP
         private String activePetId;
 
-        public PlayerSession(String id, Map<String, Integer> lvls) {
+        public PlayerSession(String id, Map<String, Integer> lvls, Map<String, Double> xps) {
             this.activePetId = id;
             this.petLevels = lvls;
+            this.petXp = xps;
         }
 
-        public String getActivePetId() {
-            return activePetId;
-        }
+        public String getActivePetId() { return activePetId; }
+        public void setActivePetId(String id) { this.activePetId = id; }
 
-        public void setActivePetId(String id) {
-            this.activePetId = id;
-        }
+        public int getLevel(String petId) { return petLevels.getOrDefault(petId, 1); }
+        public void setLevel(String petId, int level) { petLevels.put(petId, level); }
 
-        public int getLevel(String petId) {
-            return petLevels.getOrDefault(petId, 1);
-        }
+        // XP Methods
+        public double getXp(String petId) { return petXp.getOrDefault(petId, 0.0); }
+        public void setXp(String petId, double xp) { petXp.put(petId, xp); }
 
-        public void setLevel(String petId, int level) {
-            petLevels.put(petId, level);
-        }
-
-        public Map<String, Integer> getAllLevels() {
-            return petLevels;
-        }
+        public Map<String, Integer> getAllLevels() { return petLevels; }
+        public Map<String, Double> getAllXp() { return petXp; }
     }
 }
