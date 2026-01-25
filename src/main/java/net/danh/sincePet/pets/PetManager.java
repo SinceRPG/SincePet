@@ -37,7 +37,6 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
-import org.jetbrains.annotations.Nullable;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
@@ -518,39 +517,78 @@ public class PetManager {
     }
 
     private void handleAttack(Player p, ItemDisplay pet, PetData data) {
-        if (!checkFlag(p, WorldGuardHook.PET_ATTACK) || data.range() <= 0) return;
+        // 1. Kiểm tra nhanh (Fail-fast)
+        if (data.range() <= 0 || !checkFlag(p, WorldGuardHook.PET_ATTACK)) return;
+
+        // 2. Kiểm tra Cooldown
         long now = System.currentTimeMillis();
         if (now - lastAttackTime.getOrDefault(p.getUniqueId(), 0L) < (long) (data.cooldown() * 1000)) return;
+
+        // 3. Tìm mục tiêu (Targeting)
+        // Lưu ý: getNearbyEntities không quá nặng nếu range nhỏ (< 20), nhưng nên hạn chế gọi liên tục.
         LivingEntity target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range())
                 .stream()
                 .filter(e -> e instanceof Monster && !e.isDead())
                 .map(e -> (LivingEntity) e)
                 .min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation())))
                 .orElse(null);
+
         if (target != null) {
-            int lv = getPetLevel(p, data.id());
-            double dmg = Double.parseDouble(Calculator.calculator(data.getDamageFormula().replace("<level>", String.valueOf(lv)), 2));
-            Element attackElement = null;
             MMOPlayerData playerData = MMOPlayerData.get(p);
-            String stat = null;
+            // Lấy StatProvider 1 lần dùng cho tất cả các đòn đánh để tiết kiệm tài nguyên
+            final StatProvider damager = StatProvider.get(p, EquipmentSlot.MAIN_HAND, true);
+
+            // --- PHẦN 1: SÁT THƯƠNG VẬT LÝ (GỐC) ---
+            int lv = getPetLevel(p, data.id());
+            double petBaseDmg = Double.parseDouble(Calculator.calculator(data.getDamageFormula().replace("<level>", String.valueOf(lv)), 2));
+
+            // Lấy stat ATTACK_DAMAGE an toàn (tránh null pointer nếu stat map chưa load kịp)
+            double playerPhysicalDmg = playerData.getStatMap().getInstance("ATTACK_DAMAGE").getTotal();
+            double finalPhysicalDmg = petBaseDmg + (playerPhysicalDmg * data.inheritance());
+
+            // FIX LỖI: Thêm null vào vị trí Element để đánh dấu là Vật lý (Không hệ)
+            DamageMetadata physicalMeta = new DamageMetadata(finalPhysicalDmg, (Element) null, DamageType.SKILL, DamageType.PHYSICAL);
+
+            // Đặt NoDamageTicks về 0 trước khi đánh để đảm bảo trúng
+            target.setNoDamageTicks(0);
+            MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(physicalMeta, target, damager), true);
+
+
+            // --- PHẦN 2: SÁT THƯƠNG NGUYÊN TỐ (KẾ THỪA) ---
             for (Element element : MythicLib.plugin.getElements().getAll()) {
-                stat = UtilityMethods.enumName(element.getId() + "_DAMAGE");
-                if (playerData.getStatMap().getInstance(stat).getTotal() > 0) {
-                    attackElement = element;
-                    break;
+                String statKey = UtilityMethods.enumName(element.getId() + "_DAMAGE");
+                // Kiểm tra nhanh: Nếu không có stat này trong map thì bỏ qua luôn (nhanh hơn gọi .getInstance)
+                if (playerData.getStatMap().getInstance(statKey).isEmpty()) continue;
+
+                double playerElementDmg = playerData.getStatMap().getInstance(statKey).getTotal();
+
+                if (playerElementDmg > 0) {
+                    double finalElementDmg = playerElementDmg * data.inheritance();
+
+                    // Tạo damage phép thuật (MAGIC) với hệ tương ứng
+                    DamageMetadata elementMeta = new DamageMetadata(finalElementDmg, element, DamageType.SKILL, DamageType.MAGIC);
+
+                    // QUAN TRỌNG: Tiếp tục set 0 để các damage nguyên tố không bị chặn bởi đòn vật lý trước đó
+                    target.setNoDamageTicks(0);
+                    MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(elementMeta, target, damager), true);
                 }
             }
-            DamageMetadata damageMeta = new DamageMetadata(dmg + (playerData.getStatMap().getInstance(stat != null ? stat : "ATTACK_DAMAGE").getTotal() * data.inheritance()), attackElement, DamageType.SKILL, DamageType.PHYSICAL);
-            final @Nullable StatProvider damager = StatProvider.get(p, EquipmentSlot.MAIN_HAND, true);
-            MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(damageMeta, target, damager), true);
+
+            // --- PHẦN 3: HIỆU ỨNG (VISUALS) ---
+            // Spawn particle và âm thanh (Giữ nguyên vì đã ổn)
             Location start = pet.getLocation().add(0, 0.5, 0);
             Location end = target.getEyeLocation();
             Vector dir = end.toVector().subtract(start.toVector()).normalize();
             double dist = start.distance(end);
+
+            // Tối ưu vòng lặp Particle:
+            // Nếu khoảng cách xa, i += 0.5 là OK. Nếu gần, có thể tăng lên 0.8 để giảm số lượng particle client phải render.
             for (double i = 0; i < dist; i += 0.5) {
                 start.getWorld().spawnParticle(Particle.CRIT, start.clone().add(dir.clone().multiply(i)), 1, 0, 0, 0, 0);
             }
             p.playSound(start, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.5f, 2f);
+
+            // Cập nhật thời gian
             lastAttackTime.put(p.getUniqueId(), now);
         }
     }
