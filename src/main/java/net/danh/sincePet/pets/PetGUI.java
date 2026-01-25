@@ -1,5 +1,7 @@
 package net.danh.sincePet.pets;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
 import net.danh.sincePet.SincePet;
 import net.danh.sincePet.utils.Calculator;
 import net.danh.sincePet.utils.ColorUtils;
@@ -12,11 +14,13 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.inventory.meta.components.CustomModelDataComponent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class PetGUI implements InventoryHolder {
     private final SincePet plugin;
@@ -42,8 +46,11 @@ public class PetGUI implements InventoryHolder {
         // Get viewable pets for this player
         List<PetData> allPets = new ArrayList<>(plugin.getPetManager().getPetConfig().getAllPets());
         List<PetData> viewablePets = new ArrayList<>();
+
+        // Logic quyền hạn: Lấy tất cả nếu có quyền hasall hoặc quyền riêng
+        boolean hasAllPerm = p.hasPermission("pet.hasall");
         for (PetData pet : allPets) {
-            if (p.hasPermission("pet." + pet.id().toLowerCase())) {
+            if (hasAllPerm || p.hasPermission("pet." + pet.id().toLowerCase())) {
                 viewablePets.add(pet);
             }
         }
@@ -81,21 +88,31 @@ public class PetGUI implements InventoryHolder {
             PetData data = viewablePets.get(i);
             int specificLevel = plugin.getPetManager().getPetLevel(p, data.id());
 
-            ItemStack icon = new ItemStack(Material.PAPER); // Default fallback
-            try {
-                // Create skull item logic could go here if needed, but PAPER is fine for now if configured so
-                // Or retrieve skull texture if defined in PetData
-                // For now, adhering to user structure which uses PAPER + ModelData usually
-            } catch (Exception ignored) {
+            // --- TẠO ICON PET (SKULL LOGIC) ---
+            ItemStack icon;
+            if (data.texture() != null && !data.texture().isEmpty()) {
+                // Nếu có texture -> Tạo đầu người chơi
+                icon = new ItemStack(Material.PLAYER_HEAD);
+                SkullMeta skullMeta = (SkullMeta) icon.getItemMeta();
+
+                // Tạo Profile từ Base64
+                PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
+                profile.setProperty(new ProfileProperty("textures", data.texture()));
+                skullMeta.setPlayerProfile(profile);
+
+                icon.setItemMeta(skullMeta);
+            } else {
+                // Nếu không -> Dùng giấy
+                icon = new ItemStack(Material.PAPER);
             }
 
+            // --- META LOGIC (Tên, Lore, ModelData) ---
             ItemMeta meta = icon.getItemMeta();
             String nameFmt = messages.getString("pet.gui.item_name", "<name>");
             meta.displayName(ColorUtils.parse(nameFmt.replace("<name>", data.name())));
 
-            // Model Data for Pet Icon
-            // (Thêm logic này nếu bạn muốn Icon Pet có texture riêng trong GUI)
-            // meta.setCustomModelData(...)
+            // Model Data (nếu cần dùng resource pack cho item giấy)
+            // if (gui.getInt("item_model_data") > 0) meta.setCustomModelData(...)
 
             double buffValue = 0;
             try {

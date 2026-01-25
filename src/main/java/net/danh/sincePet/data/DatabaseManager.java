@@ -57,16 +57,31 @@ public class DatabaseManager {
     private void createTables() {
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
             String usersTable = getUsersTable();
-// Trong hàm createTables(), sửa câu lệnh SQL:
+
+            // CẬP NHẬT: Thêm cột pet_max_levels vào câu lệnh tạo bảng
             String sqlUsers = "CREATE TABLE IF NOT EXISTS " + usersTable + " (" +
                     "uuid VARCHAR(36) PRIMARY KEY, " +
                     "active_pet VARCHAR(64), " +
                     "pet_levels TEXT, " +
-                    "pet_xp TEXT" +  // <-- Thêm cột này
+                    "pet_xp TEXT, " +
+                    "pet_max_levels TEXT" + // <-- MỚI: Cột lưu trữ Max Level riêng từng pet
                     ");";
+
             stmt.execute(sqlUsers);
+
+            // --- TỰ ĐỘNG CẬP NHẬT BẢNG CŨ (MIGRATION) ---
+            // Kiểm tra xem cột pet_max_levels đã có chưa, nếu chưa thì thêm vào (dành cho file cũ)
+            // Logic này giúp bạn không cần xóa file database.db cũ đi
+            try {
+                // Thử thêm cột (nếu đã có thì sẽ báo lỗi và rơi vào catch -> không sao cả)
+                stmt.execute("ALTER TABLE " + usersTable + " ADD COLUMN pet_max_levels TEXT;");
+                plugin.getLogger().info("Successfully updated database: Added 'pet_max_levels' column.");
+            } catch (SQLException ignored) {
+                // Cột đã tồn tại hoặc không hỗ trợ, bỏ qua
+            }
+
         } catch (SQLException e) {
-            plugin.getLogger().severe("Could not create database tables!");
+            plugin.getLogger().severe("Could not create or update database tables!");
             e.printStackTrace();
         }
     }

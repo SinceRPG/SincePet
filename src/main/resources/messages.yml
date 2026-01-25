@@ -8,7 +8,6 @@ prefix: "<gray>[<gradient:#00FFAE:#00E0FF><bold>SincePet</bold></gradient><gray>
 
 admin:
   reload: "<green>Đã tải lại cấu hình thành công!"
-  no_permission: "<red>Bạn không có quyền sử dụng lệnh này."
 
 pet:
   command:
@@ -21,10 +20,24 @@ pet:
     levelup_other: "<green>Đã thăng cấp cho Pet của <target> lên cấp <level>."
     levelup_fail_target: "<red>Người chơi <target> không có Pet nào đang hoạt động."
 
+    # --- MESSAGES CHO LỆNH MAX LEVEL ---
+    max_level_success: "&aĐã đặt giới hạn cấp độ Pet của &e<target> &alà &e<level>."
+    max_level_receive: "&aGiới hạn cấp độ Pet của bạn đã được thay đổi thành &e<level>."
+
+    # Thông báo cho set max level từng pet riêng biệt
+    max_level_pet_success: "&aĐã đặt Max Level cho pet &e<pet> &acủa &e<target> &alà &e<level>."
+    max_level_pet_receive: "&aGiới hạn cấp độ Pet &e<pet> &acủa bạn đã được tăng lên &e<level>."
+
+    max_level_error_number: "&cSố cấp độ phải là số nguyên lớn hơn 0!"
+    no_permission: "&cBạn không có quyền sử dụng lệnh này!"
+    player_not_found: "&cKhông tìm thấy người chơi này!"
+    pet_not_found: "&cPet ID '<pet>' không tồn tại trong cấu hình!"
+
   level:
     # Actionbar hiển thị khi Pet nhận XP
     # Placeholder: <amount>, <current_xp>, <max_xp>
-    xp_actionbar: "<green>+ <amount> XP <gray>(<current_xp>/<max_xp>)"
+    xp_actionbar: "&a+<amount> XP &8(&7<current_xp>/<max_xp>&8)"
+    max_level_actionbar: "&6&lMAX LEVEL"
 
   display:
     # Tên hiển thị trên đầu Pet

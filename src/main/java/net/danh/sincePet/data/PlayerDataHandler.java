@@ -34,7 +34,8 @@ public class PlayerDataHandler {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             String petId = null;
             Map<String, Integer> petLevels = new HashMap<>();
-            Map<String, Double> petXp = new HashMap<>(); // Map XP
+            Map<String, Double> petXp = new HashMap<>();
+            Map<String, Integer> petMaxLevels = new HashMap<>(); // Map lưu Max Level từng pet
 
             try (Connection conn = plugin.getDatabaseManager().getConnection()) {
                 String query = "SELECT * FROM " + plugin.getDatabaseManager().getUsersTable() + " WHERE uuid = ?";
@@ -59,6 +60,20 @@ public class PlayerDataHandler {
                                 }.getType();
                                 petXp = gson.fromJson(jsonXp, type);
                             }
+
+                            // Load Max Levels (NEW)
+                            // Lưu ý: Cần đảm bảo cột 'pet_max_levels' đã tồn tại trong DB
+                            try {
+                                String jsonMax = rs.getString("pet_max_levels");
+                                if (jsonMax != null && !jsonMax.isEmpty()) {
+                                    Type type = new TypeToken<Map<String, Integer>>() {
+                                    }.getType();
+                                    petMaxLevels = gson.fromJson(jsonMax, type);
+                                }
+                            } catch (SQLException ignored) {
+                                // Bỏ qua nếu cột chưa được tạo (cho trường hợp update plugin nhưng chưa alter table)
+                                plugin.getLogger().warning("Column 'pet_max_levels' missing in database! Please update your schema.");
+                            }
                         }
                     }
                 }
@@ -69,10 +84,13 @@ public class PlayerDataHandler {
             String finalPetId = petId;
             Map<String, Integer> finalPetLevels = (petLevels != null) ? petLevels : new HashMap<>();
             Map<String, Double> finalPetXp = (petXp != null) ? petXp : new HashMap<>();
+            Map<String, Integer> finalPetMaxLevels = (petMaxLevels != null) ? petMaxLevels : new HashMap<>();
 
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (p.isOnline() && !sessionMap.containsKey(uuid)) {
-                    sessionMap.put(uuid, new PlayerSession(finalPetId, finalPetLevels, finalPetXp));
+                    // Truyền thêm Config mặc định vào Session để xử lý fallback
+                    int defaultMax = plugin.getConfigFile().getConfig().getInt("pet.default_max_level", 100);
+                    sessionMap.put(uuid, new PlayerSession(finalPetId, finalPetLevels, finalPetXp, finalPetMaxLevels, defaultMax));
                 }
             });
         });
@@ -81,22 +99,27 @@ public class PlayerDataHandler {
     public void saveData(UUID uuid, boolean removeDataFromMemory) {
         if (!sessionMap.containsKey(uuid)) return;
         PlayerSession session = sessionMap.get(uuid);
+
         final String activePet = session.getActivePetId();
         final String jsonLevels = gson.toJson(session.getAllLevels());
-        final String jsonXp = gson.toJson(session.getAllXp()); // Save XP JSON
+        final String jsonXp = gson.toJson(session.getAllXp());
+        final String jsonMaxLevels = gson.toJson(session.getAllMaxLevels()); // JSON Max Levels
 
         if (removeDataFromMemory) sessionMap.remove(uuid);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try (Connection conn = plugin.getDatabaseManager().getConnection()) {
+                // Cập nhật câu lệnh SQL thêm cột thứ 5
                 String upsert = plugin.getDatabaseManager().isMySQL()
-                        ? "INSERT INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE active_pet=VALUES(active_pet), pet_levels=VALUES(pet_levels), pet_xp=VALUES(pet_xp)"
-                        : "INSERT OR REPLACE INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp) VALUES (?, ?, ?, ?)";
+                        ? "INSERT INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp, pet_max_levels) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE active_pet=VALUES(active_pet), pet_levels=VALUES(pet_levels), pet_xp=VALUES(pet_xp), pet_max_levels=VALUES(pet_max_levels)"
+                        : "INSERT OR REPLACE INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp, pet_max_levels) VALUES (?, ?, ?, ?, ?)";
+
                 try (PreparedStatement ps = conn.prepareStatement(upsert)) {
                     ps.setString(1, uuid.toString());
                     ps.setString(2, activePet);
                     ps.setString(3, jsonLevels);
                     ps.setString(4, jsonXp);
+                    ps.setString(5, jsonMaxLevels); // Set Max Levels
                     ps.executeUpdate();
                 }
             } catch (SQLException e) {
@@ -105,21 +128,20 @@ public class PlayerDataHandler {
         });
     }
 
-    // saveAllSync và saveAllAsync tương tự, nhớ thêm tham số jsonXp vào SQL
-
     public void saveAllSync() {
         for (UUID uuid : new HashSet<>(sessionMap.keySet())) {
             PlayerSession session = sessionMap.get(uuid);
             if (session == null) continue;
             try (Connection conn = plugin.getDatabaseManager().getConnection()) {
                 String upsert = plugin.getDatabaseManager().isMySQL()
-                        ? "INSERT INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE active_pet=VALUES(active_pet), pet_levels=VALUES(pet_levels), pet_xp=VALUES(pet_xp)"
-                        : "INSERT OR REPLACE INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp) VALUES (?, ?, ?, ?)";
+                        ? "INSERT INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp, pet_max_levels) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE active_pet=VALUES(active_pet), pet_levels=VALUES(pet_levels), pet_xp=VALUES(pet_xp), pet_max_levels=VALUES(pet_max_levels)"
+                        : "INSERT OR REPLACE INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp, pet_max_levels) VALUES (?, ?, ?, ?, ?)";
                 try (PreparedStatement ps = conn.prepareStatement(upsert)) {
                     ps.setString(1, uuid.toString());
                     ps.setString(2, session.getActivePetId());
                     ps.setString(3, gson.toJson(session.getAllLevels()));
                     ps.setString(4, gson.toJson(session.getAllXp()));
+                    ps.setString(5, gson.toJson(session.getAllMaxLevels()));
                     ps.executeUpdate();
                 }
             } catch (SQLException e) {
@@ -138,13 +160,17 @@ public class PlayerDataHandler {
 
     public static class PlayerSession {
         private final Map<String, Integer> petLevels;
-        private final Map<String, Double> petXp; // Map XP
+        private final Map<String, Double> petXp;
+        private final Map<String, Integer> petMaxLevels; // Map Max Level riêng từng pet
+        private final int globalDefaultMax;
         private String activePetId;
 
-        public PlayerSession(String id, Map<String, Integer> lvls, Map<String, Double> xps) {
+        public PlayerSession(String id, Map<String, Integer> lvls, Map<String, Double> xps, Map<String, Integer> maxLvls, int defaultMax) {
             this.activePetId = id;
             this.petLevels = lvls;
             this.petXp = xps;
+            this.petMaxLevels = maxLvls;
+            this.globalDefaultMax = defaultMax;
         }
 
         public String getActivePetId() {
@@ -163,7 +189,6 @@ public class PlayerDataHandler {
             petLevels.put(petId, level);
         }
 
-        // XP Methods
         public double getXp(String petId) {
             return petXp.getOrDefault(petId, 0.0);
         }
@@ -178,6 +203,20 @@ public class PlayerDataHandler {
 
         public Map<String, Double> getAllXp() {
             return petXp;
+        }
+
+        // --- LOGIC MAX LEVEL MỚI ---
+        public int getMaxPetLevel(String petId) {
+            // Nếu có set riêng cho pet này thì lấy, không thì lấy mặc định config
+            return petMaxLevels.getOrDefault(petId, globalDefaultMax);
+        }
+
+        public void setMaxPetLevel(String petId, int level) {
+            petMaxLevels.put(petId, level);
+        }
+
+        public Map<String, Integer> getAllMaxLevels() {
+            return petMaxLevels;
         }
     }
 }

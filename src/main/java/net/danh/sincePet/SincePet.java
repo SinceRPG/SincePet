@@ -1,5 +1,6 @@
 package net.danh.sincePet;
 
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
@@ -25,6 +26,7 @@ public final class SincePet extends JavaPlugin {
     private ConfigUtils configFile;
     private ConfigUtils petGuiFile;
     private ConfigUtils petMessagesFile;
+    // Bỏ dataFile vì giờ lưu SQL hết rồi
 
     private PetManager petManager;
     private WorldGuardHook worldGuardHook;
@@ -59,7 +61,7 @@ public final class SincePet extends JavaPlugin {
         databaseManager = new DatabaseManager(this);
         playerDataHandler = new PlayerDataHandler(this);
 
-        // Init Manager (Starts tasks)
+        // Init Manager
         petManager = new PetManager(this);
 
         // 3. Register Listeners
@@ -82,13 +84,11 @@ public final class SincePet extends JavaPlugin {
         Bukkit.getScheduler().cancelTasks(this);
         if (petManager != null) petManager.disable();
 
-        // Save dữ liệu Sync khi tắt server
         if (playerDataHandler != null) {
             getLogger().info("Saving player data...");
             playerDataHandler.saveAllSync();
         }
 
-        // Đóng database
         if (databaseManager != null) databaseManager.close();
     }
 
@@ -97,7 +97,6 @@ public final class SincePet extends JavaPlugin {
         petGuiFile.reload();
         petMessagesFile.reload();
 
-        // CHỈNH SỬA: Reload Database an toàn
         if (databaseManager != null) {
             databaseManager.close();
             databaseManager = new DatabaseManager(this);
@@ -116,7 +115,9 @@ public final class SincePet extends JavaPlugin {
                         return 1;
                     })
                     .then(Commands.literal("ride").executes(ctx -> {
-                        if (ctx.getSource().getExecutor() instanceof Player p) petManager.ridePet(p);
+                        if (ctx.getSource().getExecutor() instanceof Player p)
+                            if (p.hasPermission("pets.ride"))
+                                petManager.ridePet(p);
                         return 1;
                     }))
                     .build(), "Open Pet GUI");
@@ -124,19 +125,122 @@ public final class SincePet extends JavaPlugin {
             // Lệnh /sincepet (Admin)
             event.registrar().register(Commands.literal("sincepet")
                     .requires(s -> s.getSender().hasPermission("sincepet.admin"))
+
+                    // 1. RELOAD
                     .then(Commands.literal("reload")
                             .executes(ctx -> {
                                 reloadFiles();
-                                ctx.getSource().getSender().sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("admin.reload", "<green>Reloaded successfully.")));
+                                ctx.getSource().getSender().sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("admin.reload")));
                                 return 1;
                             }))
+
+                    // 2. LEVEL UP
                     .then(Commands.literal("levelup")
                             .then(Commands.argument("target", StringArgumentType.word())
+                                    .suggests((ctx, builder) -> {
+                                        Bukkit.getOnlinePlayers().forEach(p -> builder.suggest(p.getName()));
+                                        return builder.buildFuture();
+                                    })
                                     .executes(ctx -> {
                                         Player t = Bukkit.getPlayer(StringArgumentType.getString(ctx, "target"));
                                         if (t != null) petManager.levelUp(t, ctx.getSource().getSender());
+                                        else
+                                            ctx.getSource().getSender().sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.player_not_found")));
                                         return 1;
                                     })))
+                    .then(Commands.literal("max_level")
+                            .then(Commands.argument("target", StringArgumentType.word())
+                                    // Gợi ý tên người chơi
+                                    .suggests((ctx, builder) -> {
+                                        String input = builder.getRemaining().toLowerCase();
+                                        for (Player p : Bukkit.getOnlinePlayers()) {
+                                            if (p.getName().toLowerCase().startsWith(input))
+                                                builder.suggest(p.getName());
+                                        }
+                                        return builder.buildFuture();
+                                    })
+                                    .then(Commands.argument("pet", StringArgumentType.word())
+                                            // Gợi ý Pet ID + từ khóa "petall"
+                                            .suggests((ctx, builder) -> {
+                                                String input = builder.getRemaining().toLowerCase();
+
+                                                // Thêm gợi ý "petall"
+                                                if ("petall".startsWith(input)) builder.suggest("petall");
+
+                                                // Thêm các ID Pet có sẵn
+                                                for (String id : petManager.getPetConfig().getPets().keySet()) {
+                                                    if (id.toLowerCase().startsWith(input)) builder.suggest(id);
+                                                }
+                                                return builder.buildFuture();
+                                            })
+                                            .then(Commands.argument("level", IntegerArgumentType.integer(1))
+                                                    .executes(ctx -> {
+                                                        String targetName = StringArgumentType.getString(ctx, "target");
+                                                        String petId = StringArgumentType.getString(ctx, "pet");
+                                                        int newMax = IntegerArgumentType.getInteger(ctx, "level");
+
+                                                        Player t = Bukkit.getPlayer(targetName);
+                                                        var sender = ctx.getSource().getSender();
+
+                                                        // Check Player
+                                                        if (t == null) {
+                                                            sender.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.player_not_found", "&cPlayer not found!")));
+                                                            return 0;
+                                                        }
+
+                                                        PlayerDataHandler.PlayerSession s = playerDataHandler.getSession(t.getUniqueId());
+                                                        if (s != null) {
+                                                            // === LOGIC MỚI: XỬ LÝ "petall" ===
+                                                            if (petId.equalsIgnoreCase("petall")) {
+                                                                // Lặp qua tất cả Pet trong config và set max level
+                                                                for (String id : petManager.getPetConfig().getPets().keySet()) {
+                                                                    s.setMaxPetLevel(id, newMax);
+                                                                }
+
+                                                                // Lưu dữ liệu
+                                                                playerDataHandler.saveData(t.getUniqueId(), false);
+
+                                                                // Thông báo (Thay <pet> bằng "Tất cả")
+                                                                sender.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.max_level_pet_success")
+                                                                        .replace("<target>", t.getName())
+                                                                        .replace("<pet>", "Tất cả")
+                                                                        .replace("<level>", String.valueOf(newMax))));
+
+                                                                t.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.max_level_pet_receive")
+                                                                        .replace("<pet>", "Tất cả")
+                                                                        .replace("<level>", String.valueOf(newMax))));
+
+                                                                return 1;
+                                                            }
+                                                            // ================================
+
+                                                            // Check Pet ID đơn lẻ (Logic cũ)
+                                                            if (petManager.getPetConfig().getPet(petId) == null) {
+                                                                sender.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.pet_not_found", "&cPet ID not found!")
+                                                                        .replace("<pet>", petId)));
+                                                                return 0;
+                                                            }
+
+                                                            // Set Max Level cho 1 pet
+                                                            s.setMaxPetLevel(petId, newMax);
+                                                            playerDataHandler.saveData(t.getUniqueId(), false);
+
+                                                            // Gửi thông báo
+                                                            sender.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.max_level_pet_success")
+                                                                    .replace("<target>", t.getName())
+                                                                    .replace("<pet>", petId)
+                                                                    .replace("<level>", String.valueOf(newMax))));
+
+                                                            t.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.max_level_pet_receive")
+                                                                    .replace("<pet>", petId)
+                                                                    .replace("<level>", String.valueOf(newMax))));
+                                                        }
+                                                        return 1;
+                                                    })
+                                            )
+                                    )
+                            )
+                    )
                     .build(), "Admin commands");
         });
     }
@@ -149,7 +253,6 @@ public final class SincePet extends JavaPlugin {
         }, seconds * 20L, seconds * 20L);
     }
 
-    // Getters
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
     }

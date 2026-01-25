@@ -22,3 +22,11 @@ database:
   
   # Tên bảng lưu dữ liệu
   table_users: "sincepet_users"
+
+# ==========================================
+# CẤU HÌNH HỆ THỐNG PET
+# ==========================================
+pet:
+  # Cấp độ tối đa mặc định cho tất cả người chơi
+  # Admin có thể chỉnh riêng cho từng người bằng lệnh /sincepet max_level
+  default_max_level: 100

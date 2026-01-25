@@ -96,18 +96,20 @@ public abstract class PetMythicDrop implements ILocationDrop {
             // Lấy thông tin Level
             int mobLevel = (int) skillCaster.get().getLevel();
             int petLevel = session.getLevel(session.getActivePetId());
+            int playerLevel = p.getLevel();
 
             // Check Range O(1)
-            if (!checkRange(petLevel)) return;
+            if (checkRange(petLevel) || checkRange(playerLevel)) {
 
-            Location location = new Location(
-                    Bukkit.getWorld(skillCaster.get().getLocation().getWorld().getName()),
-                    skillCaster.get().getLocation().getBlockX(),
-                    skillCaster.get().getLocation().getBlockY(),
-                    skillCaster.get().getLocation().getBlockZ()
-            );
+                Location location = new Location(
+                        Bukkit.getWorld(skillCaster.get().getLocation().getWorld().getName()),
+                        skillCaster.get().getLocation().getBlockX(),
+                        skillCaster.get().getLocation().getBlockY(),
+                        skillCaster.get().getLocation().getBlockZ()
+                );
 
-            processDrop(p, location, mobLevel, petLevel);
+                processDrop(p, location, mobLevel, petLevel);
+            }
         }
     }
 

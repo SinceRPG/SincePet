@@ -1,7 +1,6 @@
-package net.danh.sincePet.data;
+package net.danh.sincePet.pets;
 
 import net.danh.sincePet.SincePet;
-import net.danh.sincePet.pets.PetData;
 import net.danh.sincePet.utils.ConfigUtils;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -56,5 +55,9 @@ public class PetConfig {
 
     public Collection<PetData> getAllPets() {
         return pets.values();
+    }
+
+    public Map<String, PetData> getPets() {
+        return pets; // 'pets' là biến Map lưu trữ dữ liệu pet bạn đã load
     }
 }

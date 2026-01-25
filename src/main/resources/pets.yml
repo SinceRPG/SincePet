@@ -1,181 +1,321 @@
 pets:
-  # ==========================================
-  # 1. MONKEY KING (Chiến binh - Cận chiến)
-  # ==========================================
+  # ==========================================================
+  # NHÓM 1: DPS CHỦ LỰC (Damage Dealer)
+  # Đặc điểm: Inheritance cao, Buff Damage khủng, Máu giấy
+  # ==========================================================
   MONKEY:
-    name: "&eMonkey King"
+    name: "&eMonkey King" # Chiến binh - Cân bằng
     texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTc5OThmY2ViZjM0ODg5NDMzZTI2OTU4ZWRiY2NlOWUyZTVkYmM4ZTZmNzU4NTg5OTVhYzg3NzQ3Mjg5In19fQ=="
     stat: "PHYSICAL_DAMAGE"
-    formula: "2 + <level>"
-    max_xp_formula: "100 + (<level> * 50)"
+    # Lv1: +3 dmg | Lv10: +13 dmg | Lv100: +220 dmg
+    formula: "2 + (level * 1) + (pow(level, 2) * 0.02)"
+    max_xp_formula: "100 + (level * 50)"
     attack:
-      range: 3.5
-      cooldown: 1.2
-      damage_formula: "5 + (<level> * 1.5)"
-      inheritance: 0.3
+      range: 4.0
+      cooldown: 0.8 # Đánh nhanh
+      damage_formula: "10 + (level * 3) + (pow(level, 2) * 0.1)"
+      inheritance: 0.6 # Lấy 60% damage người chơi
     ride:
       enabled: true
       can_fly: false
 
-  # ==========================================
-  # 2. ICE DRAGON (Pháp sư - Bay lượn)
-  # ==========================================
+  WOLF:
+    name: "&fWolf Spirit" # Sát thủ - Dồn damage
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWRjMzQxYWQxOWU5YjI4ODQ3MmE2NjM5ZDYyZDIxYTAzM2E0YjgxYzU1ZTA2YmZlZGJkM2MyMjY4MmM0MCJ9fX0="
+    stat: "CRITICAL_STRIKE_CHANCE"
+    # Lv1: 2% | Lv50: 25% | Lv100: 50% (Max Crit)
+    formula: "2 + (level * 0.4) + (pow(level, 2) * 0.001)"
+    max_xp_formula: "120 + (level * 60)"
+    attack:
+      range: 3.0
+      cooldown: 0.6 # Đánh siêu nhanh
+      damage_formula: "5 + (level * 4) + (pow(level, 2) * 0.15)"
+      inheritance: 0.7 # Lấy 70% damage người chơi (Rất mạnh)
+    ride:
+      enabled: true
+      can_fly: false
+
+  REAPER:
+    name: "&8Grim Reaper" # Tử thần - One hit
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTY3YTJmMTE4Y2JmZWM3ZDU0ZTNkZTNlOGY2ZTNkZTE1ZDJkODFlZDU1YmNlMjc5YTE2ZDI4N2E1YzE4In19fQ=="
+    stat: "CRITICAL_STRIKE_POWER"
+    # Buff Crit Damage cực to
+    formula: "10 + (level * 2) + (pow(level, 2) * 0.05)"
+    max_xp_formula: "150 + (level * 70)"
+    attack:
+      range: 4.5
+      cooldown: 2.0 # Đánh chậm
+      damage_formula: "50 + (level * 10) + (pow(level, 2) * 0.5)" # Base damage cực to
+      inheritance: 0.8 # Lấy 80% damage người chơi
+    ride:
+      enabled: true
+      can_fly: true
+
+  SKELETON:
+    name: "&7Ancient Skeleton" # Xạ thủ
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTIyODRlMTMyYmZkNjU5YmM2YWRhNDk3YzRmYTMwOTRjZDkzMjMxYTZiNTA1YTEyY2U3Y2Q1MTM1YmE4ZmY5MyJ9fX0="
+    stat: "PROJECTILE_DAMAGE"
+    formula: "5 + (level * 1.5) + (pow(level, 2) * 0.03)"
+    max_xp_formula: "100 + (level * 45)"
+    attack:
+      range: 16.0 # Bắn xa
+      cooldown: 1.5
+      damage_formula: "15 + (level * 5)"
+      inheritance: 0.5
+    ride:
+      enabled: true
+      can_fly: false
+
+  # ==========================================================
+  # NHÓM 2: TANKER (Bảo kê)
+  # Đặc điểm: Inheritance thấp, Buff HP/Giáp cực khủng
+  # ==========================================================
+  TURTLE:
+    name: "&6Golden Turtle" # Thuần Máu
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMGE0MGI0ZGEwZDczNjM2ODhmZTE3YmYxY2Q1M2Q0Y2MzNzc1M2FhMjgwZjI0M2UzZDYxMGZlY2UzMzU4YmIyYiJ9fX0="
+    stat: "MAX_HEALTH"
+    # Lv1: +20 HP | Lv10: +160 HP | Lv100: +6000 HP (Trâu bò thực sự)
+    formula: "20 + (level * 10) + (pow(level, 2) * 0.4)"
+    max_xp_formula: "80 + (level * 40)" # Dễ nuôi
+    attack:
+      range: 2.5
+      cooldown: 3.0
+      damage_formula: "10 + (level * 2)"
+      inheritance: 0.1 # Damage yếu
+    ride:
+      enabled: true
+      can_fly: false
+
+  GOLEM:
+    name: "&7Iron Guardian" # Thuần Giáp
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODkwOTFkNzllYTBmNTllZjdlZjk0ZDdiYmE2ZTVmMTdmMmY3ZDQ1NzJjNDRmOTBMfdkccf98fG6"
+    stat: "ARMOR"
+    formula: "5 + (level * 1) + (pow(level, 2) * 0.05)"
+    max_xp_formula: "100 + (level * 50)"
+    attack:
+      range: 3.5
+      cooldown: 4.0
+      damage_formula: "40 + (level * 8)" # Đánh chậm nhưng thốn
+      inheritance: 0.2
+    ride:
+      enabled: true
+      can_fly: false
+
+  MAGMA:
+    name: "&cMagma Cube" # Phản đòn/Defense
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzg5NTdkNTAyM2M5MzdjNGM0ZGFhZmUyMTdjOTMzZTIyZGYyMTFkNjMwMTg0YmIyM2Q3N2M1Y2RkNjZkYiJ9fX0="
+    stat: "DEFENSE"
+    formula: "5 + (level * 1.5) + (pow(level, 2) * 0.02)"
+    max_xp_formula: "90 + (level * 45)"
+    attack:
+      range: 3.0
+      cooldown: 2.5
+      damage_formula: "20 + (level * 4)"
+      inheritance: 0.2
+    ride:
+      enabled: true
+      can_fly: false
+
+  # ==========================================================
+  # NHÓM 3: PHÁP SƯ & HỖ TRỢ (Utility)
+  # Đặc điểm: Khó nuôi, Buff chỉ số hiếm, đánh tầm xa/AoE
+  # ==========================================================
   DRAGON:
-    name: "&bIce Dragon"
+    name: "&bIce Dragon" # Huyền thoại - Magic
     texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjM2MDY2MzUwNTc2Y2Y4OWQzZGE4ZWMxZWRjYWNiZDk2ZTRjZDA3YmY0NTQ1M2NhYmY2ZjQxZmVlMWYwMjE0NiJ9fX0="
     stat: "MAGIC_DAMAGE"
-    formula: "3 + (<level> * 1.5)"
-    # Rồng khó nuôi hơn (cần nhiều XP hơn)
-    max_xp_formula: "200 * (1.1 ^ <level>)"
+    formula: "5 + (level * 2) + (pow(level, 2) * 0.1)"
+    # Rất khó nuôi (Exponential XP)
+    max_xp_formula: "200 * (1.1 ^ level)"
     attack:
-      range: 8.0
+      range: 12.0
       cooldown: 3.0
-      damage_formula: "10 + (<level> * 2.5)"
+      damage_formula: "30 + (level * 6) + (pow(level, 2) * 0.2)"
       inheritance: 0.5
     ride:
       enabled: true
       can_fly: true
 
-  # ==========================================
-  # 3. GOLDEN TURTLE (Tanker - Trâu bò)
-  # ==========================================
-  TURTLE:
-    name: "&6Golden Turtle"
-    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMGE0MGI0ZGEwZDczNjM2ODhmZTE3YmYxY2Q1M2Q0Y2MzNzc1M2FhMjgwZjI0M2UzZDYxMGZlY2UzMzU4YmIyYiJ9fX0="
-    stat: "MAX_HEALTH"
-    formula: "10 + (<level> * 5)"
-    max_xp_formula: "80 + (<level> * 40)"
-    attack:
-      range: 2.0
-      cooldown: 4.0
-      damage_formula: "3 + <level>"
-      inheritance: 0.2
-    ride:
-      enabled: true
-      can_fly: false
-
-  # ==========================================
-  # 4. PHOENIX (Hồi phục - Bay lượn)
-  # ==========================================
   PHOENIX:
-    name: "&6Fire Phoenix"
+    name: "&6Fire Phoenix" # Hồi phục
     texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMmJhNTQ4OWQ1ZTDlMzY1MzY4OTdmOGM4M2E0MzE1Y2Q3M2FhZGQ3ZGFkODBiODMzY2Q2NjE5YWM2Zjk0In19fQ=="
     stat: "HEALTH_REGENERATION"
-    formula: "0.1 + (<level> * 0.05)"
-    max_xp_formula: "150 + (<level> * 60)"
+    formula: "0.5 + (level * 0.2) + (pow(level, 2) * 0.01)"
+    max_xp_formula: "150 * (1.08 ^ level)"
     attack:
-      range: 6.0
+      range: 10.0
       cooldown: 2.5
-      damage_formula: "6 + (<level> * 2)"
+      damage_formula: "20 + (level * 5)"
       inheritance: 0.4
     ride:
       enabled: true
       can_fly: true
 
-  # ==========================================
-  # 5. WOLF SPIRIT (Sát thủ - Chí mạng)
-  # ==========================================
-  WOLF:
-    name: "&fWolf Spirit"
-    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWRjMzQxYWQxOWU5YjI4ODQ3MmE2NjM5ZDYyZDIxYTAzM2E0YjgxYzU1ZTA2YmZlZGJkM2MyMjY4MmM0MCJ9fX0="
-    stat: "CRITICAL_STRIKE_CHANCE"
-    formula: "2 + (<level> * 0.5)"
-    max_xp_formula: "120 + (<level> * 45)"
-    attack:
-      range: 3.0
-      cooldown: 1.0
-      damage_formula: "4 + (<level> * 1.8)"
-      inheritance: 0.6
-    ride:
-      enabled: true
-      can_fly: false
-
-  # ==========================================
-  # 6. MAGMA CUBE (Phòng thủ - Phản đòn)
-  # ==========================================
-  MAGMA:
-    name: "&cMagma Cube"
-    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzg5NTdkNTAyM2M5MzdjNGM0ZGFhZmUyMTdjOTMzZTIyZGYyMTFkNjMwMTg0YmIyM2Q3N2M1Y2RkNjZkYiJ9fX0="
-    stat: "DEFENSE"
-    formula: "3 + (<level> * 1.5)"
-    max_xp_formula: "100 + (<level> * 50)"
-    attack:
-      range: 3.0
-      cooldown: 3.0
-      damage_formula: "8 + (<level> * 2)"
-      inheritance: 0.3
-    ride:
-      enabled: true
-      can_fly: false
-
-  # ==========================================
-  # 7. THUNDER CAT (Tốc độ - Nhanh nhẹn)
-  # ==========================================
-  CAT:
-    name: "&eThunder Cat"
-    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTY1N2NkNTc2ZGQ2ZjBhMzMyMThiMTU1OGRiY2FjOTkzN2M0NTQ3Yzk2MTYyZDI1OWQ2YWE2YjA1ZTUifX19"
-    stat: "MOVEMENT_SPEED"
-    formula: "0.02 + (<level> * 0.005)"
-    max_xp_formula: "90 + (<level> * 40)"
-    attack:
-      range: 4.0
-      cooldown: 0.8
-      damage_formula: "3 + <level>"
-      inheritance: 0.3
-    ride:
-      enabled: true
-      can_fly: false
-
-  # ==========================================
-  # 8. FOREST FAIRY (Hỗ trợ - Mana)
-  # ==========================================
   FAIRY:
-    name: "&dForest Fairy"
+    name: "&dForest Fairy" # Mana
     texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmQ4Y2Y1NThhRmE2ODQ0MGI4YmU0OTY4M2RiMjczYjFkZDVjOTQ4YjJmY2VjYTk1NTc1M2RhODJkY2Y2In19fQ=="
     stat: "MAX_MANA"
-    formula: "10 + (<level> * 2)"
-    max_xp_formula: "110 + (<level> * 45)"
+    formula: "10 + (level * 5) + (pow(level, 2) * 0.2)"
+    max_xp_formula: "100 + (level * 40)"
     attack:
-      range: 10.0
-      cooldown: 2.0
-      damage_formula: "5 + (<level> * 1.2)"
-      inheritance: 0.2
-    ride:
-      enabled: false
-      can_fly: true
-
-  # ==========================================
-  # 9. GRIM REAPER (Sát thương bạo kích)
-  # ==========================================
-  REAPER:
-    name: "&8Grim Reaper"
-    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTY3YTJmMTE4Y2JmZWM3ZDU0ZTNkZTNlOGY2ZTNkZTE1ZDJkODFlZDU1YmNlMjc5YTE2ZDI4N2E1YzE4In19fQ=="
-    stat: "CRITICAL_STRIKE_POWER"
-    formula: "5 + (<level> * 2)"
-    max_xp_formula: "150 + (<level> * 55)"
-    attack:
-      range: 4.5
+      range: 8.0
       cooldown: 1.5
-      damage_formula: "12 + (<level> * 3)"
-      inheritance: 0.7
+      damage_formula: "10 + (level * 3)"
+      inheritance: 0.3
     ride:
       enabled: true
       can_fly: true
 
-  # ==========================================
-  # 10. HAPPY SLIME (Vui vẻ - Né tránh)
-  # ==========================================
+  CAT:
+    name: "&eThunder Cat" # Tốc chạy
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTY1N2NkNTc2ZGQ2ZjBhMzMyMThiMTU1OGRiY2FjOTkzN2M0NTQ3Yzk2MTYyZDI1OWQ2YWE2YjA1ZTUifX19"
+    stat: "MOVEMENT_SPEED"
+    # Speed tăng ít thôi không sẽ quá nhanh
+    formula: "0.02 + (level * 0.002)"
+    max_xp_formula: "80 + (level * 35)"
+    attack:
+      range: 5.0
+      cooldown: 0.5
+      damage_formula: "5 + (level * 2)"
+      inheritance: 0.4
+    ride:
+      enabled: true
+      can_fly: false
+
   SLIME:
-    name: "&aHappy Slime"
+    name: "&aHappy Slime" # Né tránh
     texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTZhZDIwZmMyZDU3OWJlMjUwZDNkZjUyNjM2Q2Y1NDVmZDIxMjBjY2RiMzgzNDQzZDRmNzM3MjQyMWNiNSJ9fX0="
     stat: "DODGE_RATING"
-    formula: "2 + <level>"
-    max_xp_formula: "50 + (<level> * 30)"
+    formula: "2 + (level * 0.5) + (pow(level, 2) * 0.01)"
+    max_xp_formula: "60 + (level * 30)" # Dễ nuôi nhất
     attack:
-      range: 2.5
-      cooldown: 2.0
-      damage_formula: "4 + <level>"
+      range: 3.0
+      cooldown: 1.5
+      damage_formula: "8 + (level * 2)"
       inheritance: 0.2
+    ride:
+      enabled: true
+      can_fly: false
+
+  BAT:
+    name: "&4Vampire Bat" # Hút máu (Lifesteal)
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTZhZDIwZmMyZDU3OWJlMjUwZDNkZjUyNjM2Q2Y1NDVmZDIxMjBjY2RiMzgzNDQzZDRmNzM3MjQyMWNiNSJ9fX0="
+    stat: "LIFESTEAL" # Giả sử MythicLib có stat này (hoặc VAMPIRISM)
+    formula: "1 + (level * 0.1)"
+    max_xp_formula: "90 + (level * 40)"
+    attack:
+      range: 4.0
+      cooldown: 0.5
+      damage_formula: "5 + (level * 2)"
+      inheritance: 0.3
+    ride:
+      enabled: true
+      can_fly: true
+
+  # ==========================================================
+  # NHÓM 4: HYBRID & SPECIAL (Đa dụng)
+  # ==========================================================
+  ZOMBIE:
+    name: "&2Undead Zombie" # Weapon DMG
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvM2ZkMmRkMWQ1YzkzZTU5NWU3OWJmMWRkYTMzMmJiODJkMjNlYzk2M2U3YTMwNGZjMjFjMjM0ZGY0NWE2ZWYifX19"
+    stat: "WEAPON_DAMAGE"
+    formula: "3 + (level * 1) + (pow(level, 2) * 0.01)"
+    max_xp_formula: "90 + (level * 45)"
+    attack:
+      range: 3.5
+      cooldown: 1.2
+      damage_formula: "15 + (level * 4)"
+      inheritance: 0.4
+    ride:
+      enabled: true
+      can_fly: false
+
+  ENDERMAN:
+    name: "&5Void Walker" # Skill DMG
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2E1OWJiMGE1YTUzMmJiMTI2YjczZDY3MzE1YjkwUDE3NGYyMWZjOTkxOTU4NDRiODhOGZjMjM1NjJjYjYifX19"
+    stat: "SKILL_DAMAGE"
+    formula: "5 + (level * 1.5) + (pow(level, 2) * 0.02)"
+    max_xp_formula: "130 + (level * 50)"
+    attack:
+      range: 6.0
+      cooldown: 1.0
+      damage_formula: "20 + (level * 5)"
+      inheritance: 0.5
+    ride:
+      enabled: true
+      can_fly: true
+
+  HORSE:
+    name: "&4Nightmare Horse" # Tốc chạy (Bản chiến mã)
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzZmY2QzZWMzYmM4NGJhZmI0MTIzZWE0Nzk0NzFmOWQyZjQyZDhmYjljNWYxMWNmNWY0ZTBkOTMyMjYifX19"
+    stat: "MOVEMENT_SPEED"
+    formula: "0.05 + (level * 0.005)" # Nhanh hơn mèo
+    max_xp_formula: "100 + (level * 40)"
+    attack:
+      range: 3.5
+      cooldown: 1.0
+      damage_formula: "15 + (level * 3)"
+      inheritance: 0.3
+    ride:
+      enabled: true
+      can_fly: false
+
+  EAGLE:
+    name: "&bStorm Eagle" # Bắn tỉa
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzZmY2QzZWMzYmM4NGJhZmI0MTIzZWE0Nzk0NzFmOWQyZjQyZDhmYjljNWYxMWNmNWY0ZTBkOTMyMjYifX19"
+    stat: "PROJECTILE_DAMAGE"
+    formula: "5 + (level * 1.2)"
+    max_xp_formula: "100 + (level * 40)"
+    attack:
+      range: 20.0 # Tầm siêu xa
+      cooldown: 2.5
+      damage_formula: "20 + (level * 6)"
+      inheritance: 0.4
+    ride:
+      enabled: true
+      can_fly: true
+
+  STRIDER:
+    name: "&cLava Strider" # Kháng lửa (PvE Nether)
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzg5NTdkNTAyM2M5MzdjNGM0ZGFhZmUyMTdjOTMzZTIyZGYyMTFkNjMwMTg0YmIyM2Q3N2M1Y2RkNjZkYiJ9fX0="
+    stat: "DEFENSE"
+    formula: "5 + (level * 1)"
+    max_xp_formula: "100 + (level * 40)"
+    attack:
+      range: 3.5
+      cooldown: 2.0
+      damage_formula: "15 + (level * 3)"
+      inheritance: 0.2
+    ride:
+      enabled: true
+      can_fly: false
+
+  SPIDER:
+    name: "&5Mystic Spider" # Magic
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTY3YTJmMTE4Y2JmZWM3ZDU0ZTNkZTNlOGY2ZTNkZTE1ZDJkODFlZDU1YmNlMjc5YTE2ZDI4N2E1YzE4In19fQ=="
+    stat: "MAGIC_DAMAGE"
+    formula: "3 + (level * 1.5)"
+    max_xp_formula: "90 + (level * 40)"
+    attack:
+      range: 5.0
+      cooldown: 1.2
+      damage_formula: "10 + (level * 3)"
+      inheritance: 0.3
+    ride:
+      enabled: true
+      can_fly: false
+
+  BEAR:
+    name: "&fSpirit Bear" # Pure Damage
+    texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWRjMzQxYWQxOWU5YjI4ODQ3MmE2NjM5ZDYyZDIxYTAzM2E0YjgxYzU1ZTA2YmZlZGJkM2MyMjY4MmM0MCJ9fX0="
+    stat: "PHYSICAL_DAMAGE"
+    formula: "8 + (level * 2) + (pow(level, 2) * 0.05)"
+    max_xp_formula: "130 + (level * 55)"
+    attack:
+      range: 3.0
+      cooldown: 2.5
+      damage_formula: "30 + (level * 8)"
+      inheritance: 0.5
     ride:
       enabled: true
       can_fly: false

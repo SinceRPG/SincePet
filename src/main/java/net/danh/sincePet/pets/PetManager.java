@@ -20,7 +20,6 @@ import io.lumine.mythic.lib.element.Element;
 import io.lumine.mythic.lib.player.modifier.ModifierSource;
 import io.lumine.mythic.lib.player.modifier.ModifierType;
 import net.danh.sincePet.SincePet;
-import net.danh.sincePet.data.PetConfig;
 import net.danh.sincePet.data.PlayerDataHandler;
 import net.danh.sincePet.hooks.WorldGuardHook;
 import net.danh.sincePet.utils.Calculator;
@@ -645,31 +644,53 @@ public class PetManager {
         PetData data = activePetData.get(p.getUniqueId());
         if (data == null) return;
 
+        int currentLevel = s.getLevel(petId);
+
+        // --- THAY ĐỔI Ở ĐÂY ---
+        // Lấy max level của Pet hiện tại (ưu tiên SQL -> Config)
+        int maxLevel = s.getMaxPetLevel(petId);
+
+        // Nếu đã Max cấp
+        if (currentLevel >= maxLevel) {
+            p.sendActionBar(ColorUtils.parse(getMsg("pet.level.max_level_actionbar")));
+            return;
+        }
+
         double currentXp = s.getXp(petId);
         double newXp = currentXp + amount;
-        int currentLevel = s.getLevel(petId);
 
         // Tính Max XP
         double maxXp = Double.parseDouble(Calculator.calculator(data.getMaxXpFormula().replace("<level>", String.valueOf(currentLevel)), 2));
 
-        // Level Up Logic (Dùng WHILE để hỗ trợ thăng nhiều cấp)
+        // Logic Level Up
         while (newXp >= maxXp) {
+            if (currentLevel >= maxLevel) {
+                newXp = 0;
+                break;
+            }
+
             newXp -= maxXp;
             levelUp(p, p);
+            currentLevel++; // Tăng cấp ảo để check tiếp vòng lặp
 
-            // Cập nhật lại Level và MaxXP cho vòng lặp tiếp theo
-            currentLevel++;
+            if (currentLevel >= maxLevel) {
+                newXp = 0;
+                break;
+            }
             maxXp = Double.parseDouble(Calculator.calculator(data.getMaxXpFormula().replace("<level>", String.valueOf(currentLevel)), 2));
         }
 
         s.setXp(petId, newXp);
 
-        // CHỈNH SỬA: Sử dụng messages.yml cho Actionbar
-        String xpMsg = getMsg("pet.level.xp_actionbar")
-                .replace("<amount>", String.format("%.1f", amount))
-                .replace("<current_xp>", String.format("%.1f", newXp))
-                .replace("<max_xp>", String.format("%.1f", maxXp));
-
-        p.sendActionBar(ColorUtils.parse(xpMsg));
+        // Actionbar XP
+        if (currentLevel >= maxLevel) {
+            p.sendActionBar(ColorUtils.parse(getMsg("pet.level.max_level_actionbar")));
+        } else {
+            String xpMsg = getMsg("pet.level.xp_actionbar")
+                    .replace("<amount>", String.format("%.1f", amount))
+                    .replace("<current_xp>", String.format("%.1f", newXp))
+                    .replace("<max_xp>", String.format("%.1f", maxXp));
+            p.sendActionBar(ColorUtils.parse(xpMsg));
+        }
     }
 }
