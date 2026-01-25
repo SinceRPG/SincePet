@@ -349,42 +349,62 @@ public class PetManager {
 
         Location targetPos = getFollowTarget(p, seed);
         Location currentPos = pet.getLocation();
-        double distSq = currentPos.distanceSquared(targetPos);
 
-        // Logic: Xoay đầu nhìn về phía chủ (hoặc hướng di chuyển)
-        Location pLoc = p.getLocation();
-        if (distSq > 0.1) {
-            Vector dir = pLoc.toVector().subtract(currentPos.toVector()).normalize();
-            float targetYaw = (float) Math.toDegrees(Math.atan2(-dir.getX(), dir.getZ()));
+        // 1. Tính toán vector khoảng cách
+        double dx = p.getLocation().getX() - currentPos.getX();
+        double dz = p.getLocation().getZ() - currentPos.getZ();
+        double distSq = (dx * dx) + (dz * dz); // Khoảng cách ngang bình phương
+
+        // FIX LỖI: Chỉ xoay khi có khoảng cách đáng kể để tránh NaN (Chia cho 0)
+        // Nếu khoảng cách quá nhỏ (< 0.01), dx và dz gần như bằng 0 -> atan2 không ổn định
+        if (distSq > 0.01) {
+            float targetYaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
             float newYaw = lerpYaw(currentPos.getYaw(), targetYaw, 0.15f);
-            currentPos.setYaw(newYaw);
+
+            // Kiểm tra an toàn: Chỉ set nếu số hợp lệ (Finite)
+            if (Float.isFinite(newYaw)) {
+                currentPos.setYaw(newYaw);
+            }
         }
 
-        if (distSq > 400) {
+        // Logic di chuyển
+        if (currentPos.distanceSquared(targetPos) > 400) {
             pet.setTeleportDuration(0);
             pet.teleport(targetPos);
-        } else if (distSq > 0.5) {
+        } else if (currentPos.distanceSquared(targetPos) > 0.5) {
+            // Chỉ cần lấy hướng vector, không cần normalize để xoay (vì đã xoay ở trên rồi)
             Vector dir = targetPos.toVector().subtract(currentPos.toVector());
             currentPos.add(dir.multiply(0.15));
 
-            // Hiệu ứng nhấp nhô khi bay/đi
             double hover = Math.sin(bobbingTick + seed) * 0.05;
             currentPos.add(0, hover, 0);
 
             pet.setTeleportDuration(TELEPORT_DURATION);
-            pet.teleport(currentPos);
+
+            // Check Finite lần cuối cho toàn bộ Location
+            if (isValidLocation(currentPos)) {
+                pet.teleport(currentPos);
+            }
         } else {
-            // Đứng yên: Nhìn theo hướng chủ + Nhấp nhô
+            // Đứng yên
             float targetYaw = p.getLocation().getYaw();
             if (Math.abs(currentPos.getYaw() - targetYaw) > 1) {
-                currentPos.setYaw(lerpYaw(currentPos.getYaw(), targetYaw, 0.1f));
+                float nextYaw = lerpYaw(currentPos.getYaw(), targetYaw, 0.1f);
+                if (Float.isFinite(nextYaw)) currentPos.setYaw(nextYaw);
             }
-            double hover = Math.sin(bobbingTick + seed) * 0.03; // Nhấp nhô nhẹ hơn khi đứng
+            double hover = Math.sin(bobbingTick + seed) * 0.03;
             currentPos.add(0, hover, 0);
 
             pet.setTeleportDuration(2);
-            pet.teleport(currentPos);
+            if (isValidLocation(currentPos)) {
+                pet.teleport(currentPos);
+            }
         }
+    }
+
+    // Helper: Kiểm tra Location có hợp lệ không
+    private boolean isValidLocation(Location loc) {
+        return Double.isFinite(loc.getX()) && Double.isFinite(loc.getY()) && Double.isFinite(loc.getZ()) && Float.isFinite(loc.getYaw()) && Float.isFinite(loc.getPitch());
     }
 
     // Các helper function khác (moveAxis, getFollowTarget, lerpYaw, collision...) GIỮ NGUYÊN
@@ -525,12 +545,7 @@ public class PetManager {
 
         // 3. Tìm mục tiêu (Targeting)
         // Lưu ý: getNearbyEntities không quá nặng nếu range nhỏ (< 20), nhưng nên hạn chế gọi liên tục.
-        LivingEntity target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range())
-                .stream()
-                .filter(e -> e instanceof Monster && !e.isDead())
-                .map(e -> (LivingEntity) e)
-                .min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation())))
-                .orElse(null);
+        LivingEntity target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range()).stream().filter(e -> e instanceof Monster && !e.isDead()).map(e -> (LivingEntity) e).min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation()))).orElse(null);
 
         if (target != null) {
             MMOPlayerData playerData = MMOPlayerData.get(p);
@@ -686,10 +701,7 @@ public class PetManager {
         if (currentLevel >= maxLevel) {
             p.sendActionBar(ColorUtils.parse(getMsg("pet.level.max_level_actionbar")));
         } else {
-            String xpMsg = getMsg("pet.level.xp_actionbar")
-                    .replace("<amount>", String.format("%.1f", amount))
-                    .replace("<current_xp>", String.format("%.1f", newXp))
-                    .replace("<max_xp>", String.format("%.1f", maxXp));
+            String xpMsg = getMsg("pet.level.xp_actionbar").replace("<amount>", String.format("%.1f", amount)).replace("<current_xp>", String.format("%.1f", newXp)).replace("<max_xp>", String.format("%.1f", maxXp));
             p.sendActionBar(ColorUtils.parse(xpMsg));
         }
     }
