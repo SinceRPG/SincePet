@@ -350,6 +350,11 @@ public class PetManager {
         Location targetPos = getFollowTarget(p, seed);
         Location currentPos = pet.getLocation();
 
+        if (targetPos.getWorld() != currentPos.getWorld()) {
+            pet.teleport(targetPos);
+            return;
+        }
+
         // 1. Tính toán vector khoảng cách
         double dx = p.getLocation().getX() - currentPos.getX();
         double dz = p.getLocation().getZ() - currentPos.getZ();
