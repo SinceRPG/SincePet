@@ -541,6 +541,7 @@ public class PetManager {
     }
 
     private void handleAttack(Player p, ItemDisplay pet, PetData data) {
+        if (p.getWorld() != pet.getWorld()) return;
         // 1. Kiểm tra nhanh (Fail-fast)
         if (data.range() <= 0 || !checkFlag(p, WorldGuardHook.PET_ATTACK)) return;
 
@@ -570,7 +571,7 @@ public class PetManager {
 
             // Đặt NoDamageTicks về 0 trước khi đánh để đảm bảo trúng
             target.setNoDamageTicks(0);
-            MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(physicalMeta, target, damager), true);
+            MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(physicalMeta, target, damager), true, false);
 
 
             // --- PHẦN 2: SÁT THƯƠNG NGUYÊN TỐ (KẾ THỪA) ---
@@ -589,7 +590,7 @@ public class PetManager {
 
                     // QUAN TRỌNG: Tiếp tục set 0 để các damage nguyên tố không bị chặn bởi đòn vật lý trước đó
                     target.setNoDamageTicks(0);
-                    MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(elementMeta, target, damager), true);
+                    MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(elementMeta, target, damager), true, false);
                 }
             }
 
