@@ -38,3 +38,5 @@ effects:
   attack:
     particle: "CRIT"
     sound: "ENTITY_PLAYER_ATTACK_SWEEP"
+  levelup:
+    sound: "ENTITY_PLAYER_LEVELUP"

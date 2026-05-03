@@ -2,8 +2,6 @@ package net.danh.sincePet.pets;
 
 import net.danh.sincePet.SincePet;
 import net.danh.sincePet.utils.ColorUtils;
-import net.danh.sincePet.utils.ConfigUtils;
-import org.bukkit.Input;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -14,9 +12,10 @@ import org.bukkit.event.player.PlayerInputEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
+/**
+ * Global listener capturing interactive events associated with Pet mechanics.
+ */
 public class PetListener implements Listener {
     private final SincePet plugin;
 
@@ -27,7 +26,7 @@ public class PetListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerDamage(EntityDamageByEntityEvent e) {
         if (!(e.getDamager() instanceof Player p)) return;
-        UUID uuid = p.getUniqueId();
+        var uuid = p.getUniqueId();
         Double multiplier = plugin.getPetManager().getDamageModifiers().get(uuid);
         if (multiplier != null) {
             e.setDamage(e.getDamage() * multiplier);
@@ -36,14 +35,17 @@ public class PetListener implements Listener {
 
     @EventHandler
     public void onGuiClick(InventoryClickEvent e) {
-        if (e.getInventory().getHolder() instanceof PetGUI gui) {
+        // Warning Note: e.getInventory().getHolder() triggers a known Paper 1.21.x NBT deserialization lag issue
+        // if interacting with highly bloated physically placed Chest blocks (MMOItems).
+        // This is safe natively inside our GUI parameters.
+        if (e.getInventory().getHolder(false) instanceof PetGUI gui) {
             e.setCancelled(true);
             if (e.getCurrentItem() == null) return;
 
-            Player p = (Player) e.getWhoClicked();
+            var p = (Player) e.getWhoClicked();
             int slot = e.getSlot();
             int currentPage = gui.getPage();
-            ConfigUtils guiConfig = plugin.getPetGuiFile();
+            var guiConfig = plugin.getPetGuiFile();
 
             int removeSlot = guiConfig.getInt("buttons.remove.slot", 49);
             int prevSlot = guiConfig.getInt("buttons.previous.slot", 45);
@@ -61,8 +63,9 @@ public class PetListener implements Listener {
                 return;
             }
 
-            List<PetData> allPets = new ArrayList<>(plugin.getPetManager().getPetConfig().getAllPets());
-            List<PetData> viewablePets = new ArrayList<>();
+            var allPets = new ArrayList<>(plugin.getPetManager().getPetConfig().getAllPets());
+            var viewablePets = new ArrayList<PetData>();
+
             for (PetData pet : allPets) {
                 if (p.hasPermission("pet." + pet.id().toLowerCase())) {
                     viewablePets.add(pet);
@@ -78,7 +81,7 @@ public class PetListener implements Listener {
             if (slot < 45) {
                 int realIndex = (currentPage - 1) * 45 + slot;
                 if (realIndex >= 0 && realIndex < viewablePets.size()) {
-                    PetData selected = viewablePets.get(realIndex);
+                    var selected = viewablePets.get(realIndex);
                     int level = plugin.getPetManager().getPetLevel(p, selected.id());
                     plugin.getPetManager().spawnPet(p, selected, level, true);
                     p.closeInventory();
@@ -89,9 +92,9 @@ public class PetListener implements Listener {
 
     @EventHandler
     public void onPlayerInput(PlayerInputEvent e) {
-        Player p = e.getPlayer();
+        var p = e.getPlayer();
         if (p.getVehicle() != null && plugin.getPetManager().isPlayerPet(p.getVehicle())) {
-            Input i = e.getInput();
+            var i = e.getInput();
             float f = 0;
             if (i.isForward()) f += 1;
             if (i.isBackward()) f -= 1;

@@ -1,12 +1,9 @@
 package net.danh.sincePet.pets;
 
-import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
-import com.sk89q.worldguard.LocalPlayer;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 import com.sk89q.worldguard.protection.flags.StateFlag;
-import com.sk89q.worldguard.protection.regions.RegionQuery;
 import io.lumine.mythic.lib.MythicLib;
 import io.lumine.mythic.lib.UtilityMethods;
 import io.lumine.mythic.lib.api.player.EquipmentSlot;
@@ -20,20 +17,17 @@ import io.lumine.mythic.lib.element.Element;
 import io.lumine.mythic.lib.player.modifier.ModifierSource;
 import io.lumine.mythic.lib.player.modifier.ModifierType;
 import net.danh.sincePet.SincePet;
-import net.danh.sincePet.data.PlayerDataHandler;
 import net.danh.sincePet.hooks.WorldGuardHook;
 import net.danh.sincePet.utils.Calculator;
 import net.danh.sincePet.utils.ColorUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
-import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.joml.AxisAngle4f;
@@ -43,11 +37,11 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Handles core logic for pets including spawning, physics, stats, and attacks.
+ * Handles the core physical logic, generation, attacking mechanics, and stat assignments of Pets.
  */
 public class PetManager {
 
-    // --- PHYSICS CONSTANTS ---
+    // Physics Engine Core Constants
     private static final float SEAT_OFFSET = 0.7f;
     private static final double PET_WIDTH = 0.6;
     private static final double PET_HEIGHT = 0.8;
@@ -67,8 +61,11 @@ public class PetManager {
     private final Map<UUID, PetData> activePetData = new ConcurrentHashMap<>();
     private final Map<UUID, float[]> playerInputs = new ConcurrentHashMap<>();
     private final Map<UUID, Vector> currentVelocity = new ConcurrentHashMap<>();
+
+    // TPS Optimizers
     private final Map<UUID, Long> lastAttackTime = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> lastTargetCheckTime = new ConcurrentHashMap<>(); // TPS Optimizer Throttle
+    private final Map<UUID, Long> lastTargetCheckTime = new ConcurrentHashMap<>();
+
     private final Map<UUID, Double> damageModifiers = new ConcurrentHashMap<>();
     private final Map<UUID, Map<StateFlag, Boolean>> lastFlagStates = new ConcurrentHashMap<>();
     private final Set<UUID> activeBuffs = ConcurrentHashMap.newKeySet();
@@ -93,15 +90,18 @@ public class PetManager {
         return damageModifiers;
     }
 
+    /**
+     * Re-initializes a pet for a player connecting to the server based on their stored session.
+     */
     public void onPlayerJoin(Player p) {
         plugin.getPlayerDataHandler().loadData(p);
         new BukkitRunnable() {
             @Override
             public void run() {
                 if (!p.isOnline()) return;
-                PlayerDataHandler.PlayerSession s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+                var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
                 if (s != null && s.getActivePetId() != null) {
-                    PetData data = petConfig.getPet(s.getActivePetId());
+                    var data = petConfig.getPet(s.getActivePetId());
                     if (data != null && p.hasPermission("pet." + data.id().toLowerCase()))
                         spawnPet(p, data, s.getLevel(data.id()), false);
                     else s.setActivePetId(null);
@@ -110,21 +110,33 @@ public class PetManager {
         }.runTaskLater(plugin, 20L);
     }
 
+    /**
+     * Cleans up tracking data when a player disconnects to prevent memory leaks.
+     */
     public void onPlayerQuit(Player p) {
         removePetVisuals(p);
         lastFlagStates.remove(p.getUniqueId());
     }
 
+    /**
+     * Safely disables and removes all pets network-wide.
+     */
     public void disable() {
         for (Player p : Bukkit.getOnlinePlayers()) removePetVisuals(p);
     }
 
+    /**
+     * Flushes current configurations and recreates pet entities.
+     */
     public void reload() {
         disable();
         petConfig.loadPets();
         for (Player p : Bukkit.getOnlinePlayers()) onPlayerJoin(p);
     }
 
+    /**
+     * Summons the visual ItemDisplay entity representing the pet.
+     */
     public void spawnPet(Player p, PetData data, int level, boolean msg) {
         if (!checkFlag(p, WorldGuardHook.PET_SPAWN)) {
             if (msg) p.sendMessage(getComp("pet.worldguard.deny_spawn"));
@@ -132,11 +144,11 @@ public class PetManager {
         }
 
         removePetVisuals(p);
-        PlayerDataHandler.PlayerSession s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
         if (s != null) s.setActivePetId(data.id());
 
-        Location spawnLoc = p.getLocation().add(0, SEAT_OFFSET, 0);
-        ItemDisplay pet = p.getWorld().spawn(spawnLoc, ItemDisplay.class, d -> {
+        var spawnLoc = p.getLocation().add(0, SEAT_OFFSET, 0);
+        var pet = p.getWorld().spawn(spawnLoc, ItemDisplay.class, d -> {
             d.setItemStack(getSkull(data.texture()));
             d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
             d.setTransformation(new Transformation(new Vector3f(0, -SEAT_OFFSET, 0), new AxisAngle4f(), new Vector3f(1f), new AxisAngle4f()));
@@ -148,7 +160,6 @@ public class PetManager {
             updatePetName(d, data, level);
         });
 
-        // Spawn Visuals & Audio from Config
         spawnParticleSafe(p.getWorld(), spawnLoc, plugin.getConfigFile().getString("effects.spawn.particle", "CLOUD"), 10);
         playSoundSafe(p, spawnLoc, plugin.getConfigFile().getString("effects.spawn.sound", "ENTITY_CHICKEN_EGG"));
 
@@ -160,14 +171,17 @@ public class PetManager {
         if (msg) p.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.spawn").replace("<name>", data.name())));
     }
 
+    /**
+     * Unregisters the visual components and stat modifiers associated with a pet.
+     */
     public void removePetVisuals(Player p) {
-        UUID id = p.getUniqueId();
-        ItemDisplay pet = activePets.remove(id);
+        var id = p.getUniqueId();
+        var pet = activePets.remove(id);
         if (pet != null) {
             spawnParticleSafe(p.getWorld(), pet.getLocation(), plugin.getConfigFile().getString("effects.despawn.particle", "POOF"), 5);
             pet.remove();
         }
-        PetData d = activePetData.remove(id);
+        var d = activePetData.remove(id);
         if (d != null) applyStat(p, d, false);
 
         playerInputs.remove(id);
@@ -178,12 +192,15 @@ public class PetManager {
         activeBuffs.remove(id);
     }
 
+    /**
+     * Executes the riding logic if permitted by the pet data and region.
+     */
     public void ridePet(Player p) {
         if (!activePets.containsKey(p.getUniqueId())) {
             p.sendMessage(getComp("pet.command.ride_fail"));
             return;
         }
-        PetData data = activePetData.get(p.getUniqueId());
+        var data = activePetData.get(p.getUniqueId());
         if (!checkFlag(p, WorldGuardHook.PET_RIDE)) {
             p.sendMessage(getComp("pet.worldguard.deny_ride"));
             return;
@@ -196,34 +213,41 @@ public class PetManager {
         p.sendMessage(getComp("pet.command.ride_success"));
     }
 
+    /**
+     * Fully de-registers and un-assigns the pet from the player's session.
+     */
     public void despawnPet(Player p) {
         removePetVisuals(p);
-        PlayerDataHandler.PlayerSession s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
         if (s != null) s.setActivePetId(null);
     }
 
     public int getPetLevel(Player p, String petId) {
-        PlayerDataHandler.PlayerSession s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
         return (s != null) ? s.getLevel(petId) : 1;
     }
 
+    /**
+     * Increases the pet's level and triggers relevant visual and audio cues.
+     */
     public void levelUp(Player target, CommandSender sender) {
-        PlayerDataHandler.PlayerSession s = plugin.getPlayerDataHandler().getSession(target.getUniqueId());
+        var s = plugin.getPlayerDataHandler().getSession(target.getUniqueId());
         if (s == null || s.getActivePetId() == null) {
             sender.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.levelup_fail_target").replace("<target>", target.getName())));
             return;
         }
-        String id = s.getActivePetId();
+        var id = s.getActivePetId();
         int newLv = s.getLevel(id) + 1;
         s.setLevel(id, newLv);
-        PetData data = activePetData.get(target.getUniqueId());
+        var data = activePetData.get(target.getUniqueId());
         if (data != null) {
             updateStatStatus(target, data);
             updatePetName(activePets.get(target.getUniqueId()), data, newLv);
         }
-        String name = (data != null) ? data.name() : id;
+        var name = (data != null) ? data.name() : id;
         target.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.levelup_self").replace("<name>", name).replace("<level>", String.valueOf(newLv))));
-        playSoundSafe(target, target.getLocation(), "ENTITY_PLAYER_LEVELUP");
+        playSoundSafe(target, target.getLocation(), plugin.getConfigFile().getString("effects.levelup.sound", "ENTITY_PLAYER_LEVELUP"));
+
         if (!sender.equals(target))
             sender.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.levelup_other").replace("<target>", target.getName()).replace("<level>", String.valueOf(newLv))));
     }
@@ -241,17 +265,20 @@ public class PetManager {
     //                      PHYSICS ENGINE (CORE)
     // =================================================================
 
+    /**
+     * Master repeating task. Handles collision, input vectors, following algorithms, and combat intervals.
+     */
     private void startPetRunnable() {
         new BukkitRunnable() {
             public void run() {
                 bobbingTick += 0.15;
-                Iterator<Map.Entry<UUID, ItemDisplay>> it = activePets.entrySet().iterator();
+                var it = activePets.entrySet().iterator();
 
                 while (it.hasNext()) {
-                    Map.Entry<UUID, ItemDisplay> entry = it.next();
-                    UUID uuid = entry.getKey();
-                    ItemDisplay pet = entry.getValue();
-                    Player p = Bukkit.getPlayer(uuid);
+                    var entry = it.next();
+                    var uuid = entry.getKey();
+                    var pet = entry.getValue();
+                    var p = Bukkit.getPlayer(uuid);
 
                     if (p == null || !p.isOnline() || pet == null || pet.isDead()) {
                         cleanupEntry(it, uuid, pet);
@@ -259,7 +286,7 @@ public class PetManager {
                     }
 
                     checkAndNotifyFlags(p);
-                    PetData data = activePetData.get(uuid);
+                    var data = activePetData.get(uuid);
                     if (data == null) continue;
 
                     if (!checkFlag(p, WorldGuardHook.PET_SPAWN)) {
@@ -271,7 +298,7 @@ public class PetManager {
                     updateStatStatus(p, data);
                     handleAttack(p, pet, data);
 
-                    // ================= RIDING LOGIC =================
+                    // Riding mechanics execution
                     if (pet.getPassengers().contains(p)) {
                         if (!checkFlag(p, WorldGuardHook.PET_RIDE)) {
                             p.sendMessage(getComp("pet.worldguard.auto_dismount"));
@@ -279,19 +306,19 @@ public class PetManager {
                             continue;
                         }
 
-                        float[] i = playerInputs.getOrDefault(uuid, new float[]{0, 0, 0});
+                        var i = playerInputs.getOrDefault(uuid, new float[]{0, 0, 0});
                         boolean canFly = data.canFly() && checkFlag(p, WorldGuardHook.PET_FLY);
-                        Location curLoc = pet.getLocation();
+                        var curLoc = pet.getLocation();
                         curLoc.setYaw(p.getLocation().getYaw());
 
-                        Vector velocity = currentVelocity.getOrDefault(uuid, new Vector(0, 0, 0));
+                        var velocity = currentVelocity.getOrDefault(uuid, new Vector(0, 0, 0));
 
                         if (canFly) {
                             curLoc.setPitch(p.getLocation().getPitch());
-                            Vector desiredVel = new Vector(0, 0, 0);
+                            var desiredVel = new Vector(0, 0, 0);
                             if (i[0] != 0 || i[1] != 0) {
-                                Vector dir = p.getLocation().getDirection().normalize();
-                                Vector left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
+                                var dir = p.getLocation().getDirection().normalize();
+                                var left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
                                 desiredVel = dir.multiply(i[0]).add(left.multiply(i[1])).normalize().multiply(FLY_SPEED);
                             }
                             if (i[2] > 0) desiredVel.add(new Vector(0, FLY_VERTICAL_SPEED, 0));
@@ -299,16 +326,16 @@ public class PetManager {
                             velocity.multiply(FLY_FRICTION);
                             velocity.add(desiredVel.multiply(FLY_ACCEL));
 
-                            Location target = curLoc.clone().add(velocity);
+                            var target = curLoc.clone().add(velocity);
                             if (!isCollision(target)) curLoc.add(velocity);
                             else velocity.multiply(0.5);
 
                         } else {
                             curLoc.setPitch(0);
-                            Vector moveDir = new Vector(0, 0, 0);
+                            var moveDir = new Vector(0, 0, 0);
                             if (i[0] != 0 || i[1] != 0) {
-                                Vector dir = p.getLocation().getDirection().setY(0).normalize();
-                                Vector left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
+                                var dir = p.getLocation().getDirection().setY(0).normalize();
+                                var left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
                                 moveDir = dir.multiply(i[0]).add(left.multiply(i[1])).normalize().multiply(MOVE_SPEED_GROUND);
                             }
 
@@ -337,7 +364,6 @@ public class PetManager {
                         pet.teleport(curLoc);
 
                     } else {
-                        // ================= FOLLOWING LOGIC =================
                         handleFollowLogic(p, pet, uuid.hashCode());
                     }
                 }
@@ -345,12 +371,15 @@ public class PetManager {
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
+    /**
+     * Executes the procedural logic to keep the pet trailing behind the owner.
+     */
     private void handleFollowLogic(Player p, ItemDisplay pet, int seed) {
         playerInputs.remove(p.getUniqueId());
         currentVelocity.remove(p.getUniqueId());
 
-        Location targetPos = getFollowTarget(p, seed);
-        Location currentPos = pet.getLocation();
+        var targetPos = getFollowTarget(p, seed);
+        var currentPos = pet.getLocation();
 
         if (targetPos.getWorld() != currentPos.getWorld()) {
             pet.teleport(targetPos);
@@ -361,7 +390,7 @@ public class PetManager {
         double dz = p.getLocation().getZ() - currentPos.getZ();
         double distSq = (dx * dx) + (dz * dz);
 
-        // Safe yaw rotation to prevent NaN exceptions
+        // Safe yaw rotation to prevent NaN exceptions during idle states
         if (distSq > 0.01) {
             float targetYaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
             float newYaw = lerpYaw(currentPos.getYaw(), targetYaw, 0.15f);
@@ -372,7 +401,7 @@ public class PetManager {
             pet.setTeleportDuration(0);
             pet.teleport(targetPos);
         } else if (currentPos.distanceSquared(targetPos) > 0.5) {
-            Vector dir = targetPos.toVector().subtract(currentPos.toVector());
+            var dir = targetPos.toVector().subtract(currentPos.toVector());
             currentPos.add(dir.multiply(0.15));
             double hover = Math.sin(bobbingTick + seed) * 0.05;
             currentPos.add(0, hover, 0);
@@ -399,12 +428,12 @@ public class PetManager {
 
     private void moveAxis(Location loc, Vector vel, boolean onGround) {
         if (Math.abs(vel.getX()) < 0.001 && Math.abs(vel.getZ()) < 0.001) return;
-        Location target = loc.clone().add(vel);
+        var target = loc.clone().add(vel);
         if (!isCollision(target)) {
             loc.add(vel);
         } else if (onGround) {
             for (double h = 0.5; h <= MAX_STEP_HEIGHT; h += 0.5) {
-                Location stepHigh = target.clone().add(0, h, 0);
+                var stepHigh = target.clone().add(0, h, 0);
                 if (!isCollision(stepHigh) && !isCollision(stepHigh.clone().add(0, 1, 0))) {
                     loc.add(vel).add(0, h, 0);
                     break;
@@ -414,12 +443,12 @@ public class PetManager {
     }
 
     private Location getFollowTarget(Player p, int seed) {
-        Location pLoc = p.getLocation();
-        Location pEye = p.getEyeLocation();
-        Vector dir = pLoc.getDirection().setY(0).normalize();
-        Vector left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
+        var pLoc = p.getLocation();
+        var pEye = p.getEyeLocation();
+        var dir = pLoc.getDirection().setY(0).normalize();
+        var left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
         double b = Math.sin(bobbingTick + seed) * 0.1;
-        Location target = pEye.clone().add(left.multiply(1.0)).subtract(dir.multiply(0.3)).add(0, b - 0.2, 0);
+        var target = pEye.clone().add(left.multiply(1.0)).subtract(dir.multiply(0.3)).add(0, b - 0.2, 0);
         target.setYaw(pLoc.getYaw());
         return target;
     }
@@ -432,13 +461,13 @@ public class PetManager {
     }
 
     private boolean isTouchingGround(Location loc) {
-        BoundingBox box = BoundingBox.of(loc, PET_WIDTH / 2, 0.1, PET_WIDTH / 2);
+        var box = BoundingBox.of(loc, PET_WIDTH / 2, 0.1, PET_WIDTH / 2);
         box.shift(0, -SEAT_OFFSET - 0.05, 0);
         return checkBlockCollision(loc.getWorld(), box);
     }
 
     private boolean isCollision(Location loc) {
-        BoundingBox box = BoundingBox.of(loc, PET_WIDTH / 2, PET_HEIGHT / 2, PET_WIDTH / 2);
+        var box = BoundingBox.of(loc, PET_WIDTH / 2, PET_HEIGHT / 2, PET_WIDTH / 2);
         box.shift(0, -SEAT_OFFSET + (PET_HEIGHT / 2), 0);
         return checkBlockCollision(loc.getWorld(), box);
     }
@@ -453,7 +482,7 @@ public class PetManager {
         for (int x = minX; x < maxX; x++) {
             for (int y = minY; y < maxY; y++) {
                 for (int z = minZ; z < maxZ; z++) {
-                    Block b = world.getBlockAt(x, y, z);
+                    var b = world.getBlockAt(x, y, z);
                     if (b.getType().isSolid() && !b.isPassable()) {
                         if (box.overlaps(b.getBoundingBox())) return true;
                     }
@@ -464,7 +493,7 @@ public class PetManager {
     }
 
     private void alignToGround(Location loc) {
-        RayTraceResult res = loc.getWorld().rayTraceBlocks(loc.clone().add(0, 0.5, 0), new Vector(0, -1, 0), SEAT_OFFSET + 1.0, FluidCollisionMode.NEVER, true);
+        var res = loc.getWorld().rayTraceBlocks(loc.clone().add(0, 0.5, 0), new Vector(0, -1, 0), SEAT_OFFSET + 1.0, FluidCollisionMode.NEVER, true);
         if (res != null && res.getHitPosition() != null) loc.setY(res.getHitPosition().getY() + SEAT_OFFSET);
     }
 
@@ -493,9 +522,12 @@ public class PetManager {
         d.customName(ColorUtils.parse(getMsg("pet.display.name_format").replace("<name>", data.name()).replace("<level>", String.valueOf(lv))));
     }
 
+    /**
+     * Assigns and dynamically recalculates statistical modifiers applied to the player via MythicLib.
+     */
     private void updateStatStatus(Player p, PetData d) {
         if (!hasMythicLib) return;
-        UUID uuid = p.getUniqueId();
+        var uuid = p.getUniqueId();
         boolean allowed = checkFlag(p, WorldGuardHook.PET_BUFF);
         boolean isActive = activeBuffs.contains(uuid);
         if (allowed && !isActive) {
@@ -510,8 +542,8 @@ public class PetManager {
     private void applyStat(Player p, PetData d, boolean add) {
         if (!hasMythicLib) return;
         try {
-            MMOPlayerData pd = MMOPlayerData.get(p);
-            String k = "sincepet_bonus";
+            var pd = MMOPlayerData.get(p);
+            var k = "sincepet_bonus";
             if (add) {
                 int lv = getPetLevel(p, d.id());
                 double v = Double.parseDouble(Calculator.calculator(d.formula().replace("<level>", String.valueOf(lv)), 2));
@@ -524,58 +556,63 @@ public class PetManager {
         }
     }
 
+    /**
+     * Executes the pet's auto-attack sequence targeting nearby hostile entities.
+     * Incorporates TPS safeguarding buffers to prevent recursive entity-checking locks.
+     */
     private void handleAttack(Player p, ItemDisplay pet, PetData data) {
         if (p.getWorld() != pet.getWorld()) return;
         if (data.range() <= 0 || !checkFlag(p, WorldGuardHook.PET_ATTACK)) return;
 
         long now = System.currentTimeMillis();
-        // Check cooldown
+
+        // Verifying global cooldowns
         if (now - lastAttackTime.getOrDefault(p.getUniqueId(), 0L) < (long) (data.cooldown() * 1000)) return;
 
-        // TPS Optimization: Throttle the heavy entity query to once every 500ms when waiting for a target
+        // TPS Optimization: Throttle the heavy entity iteration query to once every 500ms
         if (now - lastTargetCheckTime.getOrDefault(p.getUniqueId(), 0L) < 500) return;
         lastTargetCheckTime.put(p.getUniqueId(), now);
 
-        LivingEntity target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range()).stream()
+        var target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range()).stream()
                 .filter(e -> e instanceof Monster && !e.isDead())
                 .map(e -> (LivingEntity) e)
                 .min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation())))
                 .orElse(null);
 
         if (target != null) {
-            MMOPlayerData playerData = MMOPlayerData.get(p);
-            final StatProvider damager = StatProvider.get(p, EquipmentSlot.MAIN_HAND, true);
+            var playerData = MMOPlayerData.get(p);
+            var damager = StatProvider.get(p, EquipmentSlot.MAIN_HAND, true);
 
             int lv = getPetLevel(p, data.id());
             double petBaseDmg = Double.parseDouble(Calculator.calculator(data.getDamageFormula().replace("<level>", String.valueOf(lv)), 2));
             double playerPhysicalDmg = playerData.getStatMap().getInstance("ATTACK_DAMAGE").getTotal();
             double finalPhysicalDmg = petBaseDmg + (playerPhysicalDmg * data.inheritance());
 
-            DamageMetadata physicalMeta = new DamageMetadata(finalPhysicalDmg, (Element) null, DamageType.SKILL, DamageType.PHYSICAL);
+            var physicalMeta = new DamageMetadata(finalPhysicalDmg, (Element) null, DamageType.SKILL, DamageType.PHYSICAL);
 
             target.setNoDamageTicks(0);
             MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(physicalMeta, target, damager), true, false);
 
             for (Element element : MythicLib.plugin.getElements().getAll()) {
-                String statKey = UtilityMethods.enumName(element.getId() + "_DAMAGE");
+                var statKey = UtilityMethods.enumName(element.getId() + "_DAMAGE");
                 if (playerData.getStatMap().getInstance(statKey).isEmpty()) continue;
 
                 double playerElementDmg = playerData.getStatMap().getInstance(statKey).getTotal();
                 if (playerElementDmg > 0) {
                     double finalElementDmg = playerElementDmg * data.inheritance();
-                    DamageMetadata elementMeta = new DamageMetadata(finalElementDmg, element, DamageType.SKILL, DamageType.MAGIC);
+                    var elementMeta = new DamageMetadata(finalElementDmg, element, DamageType.SKILL, DamageType.MAGIC);
                     target.setNoDamageTicks(0);
                     MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(elementMeta, target, damager), true, false);
                 }
             }
 
-            // Visuals
-            Location start = pet.getLocation().add(0, 0.5, 0);
-            Location end = target.getEyeLocation();
-            Vector dir = end.toVector().subtract(start.toVector()).normalize();
+            // Execute Graphical Effects natively grabbed from configurations
+            var start = pet.getLocation().add(0, 0.5, 0);
+            var end = target.getEyeLocation();
+            var dir = end.toVector().subtract(start.toVector()).normalize();
             double dist = start.distance(end);
 
-            String particleConfig = plugin.getConfigFile().getString("effects.attack.particle", "CRIT");
+            var particleConfig = plugin.getConfigFile().getString("effects.attack.particle", "CRIT");
             spawnParticleSafe(start.getWorld(), start, particleConfig, dir, dist);
             playSoundSafe(p, start, plugin.getConfigFile().getString("effects.attack.sound", "ENTITY_PLAYER_ATTACK_SWEEP"));
 
@@ -583,6 +620,9 @@ public class PetManager {
         }
     }
 
+    /**
+     * Safely triggers a particle at a defined location avoiding console exceptions.
+     */
     private void spawnParticleSafe(World world, Location loc, String particleName, int count) {
         try {
             world.spawnParticle(Particle.valueOf(particleName), loc, count, 0.2, 0.2, 0.2, 0.05);
@@ -590,9 +630,12 @@ public class PetManager {
         }
     }
 
+    /**
+     * Safely executes a directional particle vector array.
+     */
     private void spawnParticleSafe(World world, Location start, String particleName, Vector dir, double dist) {
         try {
-            Particle p = Particle.valueOf(particleName);
+            var p = Particle.valueOf(particleName);
             for (double i = 0; i < dist; i += 0.5) {
                 world.spawnParticle(p, start.clone().add(dir.clone().multiply(i)), 1, 0, 0, 0, 0);
             }
@@ -600,6 +643,9 @@ public class PetManager {
         }
     }
 
+    /**
+     * Safely triggers a sound packet sent to the specified player.
+     */
     private void playSoundSafe(Player p, Location loc, String soundName) {
         try {
             p.playSound(loc, Sound.valueOf(soundName), 1f, 1f);
@@ -607,19 +653,22 @@ public class PetManager {
         }
     }
 
+    /**
+     * Resolves geographical restrictions dynamically querying the WorldGuard Region container.
+     */
     private boolean checkFlag(Player p, StateFlag flag) {
         if (!hasWorldGuard) return true;
-        LocalPlayer localPlayer = WorldGuardPlugin.inst().wrapPlayer(p);
-        RegionQuery query = plugin.getWorldGuardHook().getQuery();
-        com.sk89q.worldedit.util.Location loc = BukkitAdapter.adapt(p.getLocation());
+        var localPlayer = WorldGuardPlugin.inst().wrapPlayer(p);
+        var query = plugin.getWorldGuardHook().getQuery();
+        var loc = BukkitAdapter.adapt(p.getLocation()); // Uses 'var' to prevent FQCN import overlap issues
         return query.testState(loc, localPlayer, flag);
     }
 
     private void checkAndNotifyFlags(Player p) {
         if (!hasWorldGuard) return;
-        UUID uuid = p.getUniqueId();
+        var uuid = p.getUniqueId();
         lastFlagStates.putIfAbsent(uuid, new HashMap<>());
-        Map<StateFlag, Boolean> states = lastFlagStates.get(uuid);
+        var states = lastFlagStates.get(uuid);
         checkSingleFlagNotify(p, states, WorldGuardHook.PET_SPAWN, "spawn");
         checkSingleFlagNotify(p, states, WorldGuardHook.PET_RIDE, "ride");
         checkSingleFlagNotify(p, states, WorldGuardHook.PET_FLY, "fly");
@@ -642,21 +691,24 @@ public class PetManager {
     }
 
     private ItemStack getSkull(String base64) {
-        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) item.getItemMeta();
-        PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
+        var item = new ItemStack(Material.PLAYER_HEAD);
+        var meta = (SkullMeta) item.getItemMeta();
+        var profile = Bukkit.createProfile(UUID.randomUUID());
         profile.setProperty(new ProfileProperty("textures", base64));
         meta.setPlayerProfile(profile);
         item.setItemMeta(meta);
         return item;
     }
 
+    /**
+     * Processes Experience Point injections modifying dynamic maximum level boundaries.
+     */
     public void addExp(Player p, double amount) {
-        PlayerDataHandler.PlayerSession s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
         if (s == null || s.getActivePetId() == null) return;
 
-        String petId = s.getActivePetId();
-        PetData data = activePetData.get(p.getUniqueId());
+        var petId = s.getActivePetId();
+        var data = activePetData.get(p.getUniqueId());
         if (data == null) return;
 
         int currentLevel = s.getLevel(petId);
@@ -691,7 +743,7 @@ public class PetManager {
         if (currentLevel >= maxLevel) {
             p.sendActionBar(ColorUtils.parse(getMsg("pet.level.max_level_actionbar")));
         } else {
-            String xpMsg = getMsg("pet.level.xp_actionbar").replace("<amount>", String.format("%.1f", amount)).replace("<current_xp>", String.format("%.1f", newXp)).replace("<max_xp>", String.format("%.1f", maxXp));
+            var xpMsg = getMsg("pet.level.xp_actionbar").replace("<amount>", String.format("%.1f", amount)).replace("<current_xp>", String.format("%.1f", newXp)).replace("<max_xp>", String.format("%.1f", maxXp));
             p.sendActionBar(ColorUtils.parse(xpMsg));
         }
     }

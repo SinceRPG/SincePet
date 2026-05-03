@@ -20,7 +20,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
- * Main class of SincePet. Initializes configs, managers, listeners, and commands.
+ * The main entry point for the SincePet plugin.
+ * Handles the initialization of configurations, databases, managers, listeners, and commands.
  */
 public final class SincePet extends JavaPlugin {
     private static SincePet plugin;
@@ -35,6 +36,11 @@ public final class SincePet extends JavaPlugin {
     private PlayerDataHandler playerDataHandler;
     private DatabaseManager databaseManager;
 
+    /**
+     * Retrieves the singleton instance of the plugin.
+     *
+     * @return The SincePet plugin instance.
+     */
     public static SincePet getPlugin() {
         return plugin;
     }
@@ -42,11 +48,10 @@ public final class SincePet extends JavaPlugin {
     @Override
     public void onLoad() {
         plugin = this;
-        // Hook into WorldGuard early to register flags safely
         if (getServer().getPluginManager().getPlugin("WorldGuard") != null) {
             worldGuardHook = new WorldGuardHook();
             worldGuardHook.register();
-            getLogger().info("Hooked into WorldGuard!");
+            getLogger().info("Hooked into WorldGuard successfully!");
         }
     }
 
@@ -54,28 +59,24 @@ public final class SincePet extends JavaPlugin {
     public void onEnable() {
         miniMessage = MiniMessage.miniMessage();
 
-        // 1. Load Configs
         configFile = new ConfigUtils(this, "config.yml");
         petGuiFile = new ConfigUtils(this, "gui.yml");
         petMessagesFile = new ConfigUtils(this, "messages.yml");
 
-        // 2. Initialize Data & Managers
         databaseManager = new DatabaseManager(this);
         playerDataHandler = new PlayerDataHandler(this);
         petManager = new PetManager(this);
 
-        // 3. Register Listeners
-        getServer().getPluginManager().registerEvents(new PetListener(this), this);
-        getServer().getPluginManager().registerEvents(new JoinQuit(this), this);
-        if (getServer().getPluginManager().isPluginEnabled("MythicMobs")) {
-            getServer().getPluginManager().registerEvents(new MythicDropRegister(), this);
-            getLogger().info("Hooked into MythicMobs Drops (pet-xp)!");
+        var pm = getServer().getPluginManager();
+        pm.registerEvents(new PetListener(this), this);
+        pm.registerEvents(new JoinQuit(this), this);
+
+        if (pm.isPluginEnabled("MythicMobs")) {
+            pm.registerEvents(new MythicDropRegister(), this);
+            getLogger().info("Hooked into MythicMobs Drops for Pet EXP!");
         }
 
-        // 4. Register Commands
         registerCommands();
-
-        // 5. Auto Save Task
         startAutoSaveTask();
     }
 
@@ -85,13 +86,16 @@ public final class SincePet extends JavaPlugin {
         if (petManager != null) petManager.disable();
 
         if (playerDataHandler != null) {
-            getLogger().info("Saving player data...");
+            getLogger().info("Synchronizing and saving player data...");
             playerDataHandler.saveAllSync();
         }
 
         if (databaseManager != null) databaseManager.close();
     }
 
+    /**
+     * Reloads all YAML configurations and refreshes active systems.
+     */
     public void reloadFiles() {
         configFile.reload();
         petGuiFile.reload();
@@ -105,9 +109,13 @@ public final class SincePet extends JavaPlugin {
         if (petManager != null) petManager.reload();
     }
 
+    /**
+     * Registers the Brigadier commands utilizing the Paper Lifecycle Events API.
+     */
     private void registerCommands() {
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
-            // /pet command (Open GUI)
+
+            // Standard User Command
             event.registrar().register(Commands.literal("pet")
                     .executes(ctx -> {
                         if (ctx.getSource().getExecutor() instanceof Player p)
@@ -120,21 +128,17 @@ public final class SincePet extends JavaPlugin {
                                 petManager.ridePet(p);
                         return 1;
                     }))
-                    .build(), "Open Pet GUI");
+                    .build(), "Open the Pet GUI");
 
-            // /sincepet command (Admin)
+            // Administrative Command
             event.registrar().register(Commands.literal("sincepet")
                     .requires(s -> s.getSender().hasPermission("sincepet.admin"))
-
-                    // 1. RELOAD
                     .then(Commands.literal("reload")
                             .executes(ctx -> {
                                 reloadFiles();
                                 ctx.getSource().getSender().sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("admin.reload")));
                                 return 1;
                             }))
-
-                    // 2. LEVEL UP
                     .then(Commands.literal("levelup")
                             .then(Commands.argument("target", StringArgumentType.word())
                                     .suggests((ctx, builder) -> {
@@ -142,17 +146,16 @@ public final class SincePet extends JavaPlugin {
                                         return builder.buildFuture();
                                     })
                                     .executes(ctx -> {
-                                        Player t = Bukkit.getPlayer(StringArgumentType.getString(ctx, "target"));
+                                        var t = Bukkit.getPlayer(StringArgumentType.getString(ctx, "target"));
                                         if (t != null) petManager.levelUp(t, ctx.getSource().getSender());
                                         else
                                             ctx.getSource().getSender().sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.player_not_found")));
                                         return 1;
                                     })))
-                    // 3. MAX LEVEL
                     .then(Commands.literal("max_level")
                             .then(Commands.argument("target", StringArgumentType.word())
                                     .suggests((ctx, builder) -> {
-                                        String input = builder.getRemaining().toLowerCase();
+                                        var input = builder.getRemaining().toLowerCase();
                                         for (Player p : Bukkit.getOnlinePlayers()) {
                                             if (p.getName().toLowerCase().startsWith(input))
                                                 builder.suggest(p.getName());
@@ -161,7 +164,7 @@ public final class SincePet extends JavaPlugin {
                                     })
                                     .then(Commands.argument("pet", StringArgumentType.word())
                                             .suggests((ctx, builder) -> {
-                                                String input = builder.getRemaining().toLowerCase();
+                                                var input = builder.getRemaining().toLowerCase();
                                                 if ("petall".startsWith(input)) builder.suggest("petall");
                                                 for (String id : petManager.getPetConfig().getPets().keySet()) {
                                                     if (id.toLowerCase().startsWith(input)) builder.suggest(id);
@@ -170,11 +173,11 @@ public final class SincePet extends JavaPlugin {
                                             })
                                             .then(Commands.argument("level", IntegerArgumentType.integer(1))
                                                     .executes(ctx -> {
-                                                        String targetName = StringArgumentType.getString(ctx, "target");
-                                                        String petId = StringArgumentType.getString(ctx, "pet");
-                                                        int newMax = IntegerArgumentType.getInteger(ctx, "level");
+                                                        var targetName = StringArgumentType.getString(ctx, "target");
+                                                        var petId = StringArgumentType.getString(ctx, "pet");
+                                                        var newMax = IntegerArgumentType.getInteger(ctx, "level");
 
-                                                        Player t = Bukkit.getPlayer(targetName);
+                                                        var t = Bukkit.getPlayer(targetName);
                                                         var sender = ctx.getSource().getSender();
 
                                                         if (t == null) {
@@ -182,11 +185,10 @@ public final class SincePet extends JavaPlugin {
                                                             return 0;
                                                         }
 
-                                                        PlayerDataHandler.PlayerSession s = playerDataHandler.getSession(t.getUniqueId());
+                                                        var s = playerDataHandler.getSession(t.getUniqueId());
                                                         if (s != null) {
-                                                            String allString = petMessagesFile.getString("pet.command.all_pets", "All");
+                                                            var allString = petMessagesFile.getString("pet.command.all_pets", "All");
 
-                                                            // Handle 'petall' keyword
                                                             if (petId.equalsIgnoreCase("petall")) {
                                                                 for (String id : petManager.getPetConfig().getPets().keySet()) {
                                                                     s.setMaxPetLevel(id, newMax);
@@ -205,8 +207,7 @@ public final class SincePet extends JavaPlugin {
                                                             }
 
                                                             if (petManager.getPetConfig().getPet(petId) == null) {
-                                                                sender.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.pet_not_found", "&cPet ID not found!")
-                                                                        .replace("<pet>", petId)));
+                                                                sender.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.pet_not_found", "&cPet ID not found!").replace("<pet>", petId)));
                                                                 return 0;
                                                             }
 
@@ -232,6 +233,9 @@ public final class SincePet extends JavaPlugin {
         });
     }
 
+    /**
+     * Initializes the asynchronous data saving runnable based on config timing.
+     */
     private void startAutoSaveTask() {
         long seconds = configFile.getConfig().getLong("auto-save", 300);
         if (seconds <= 0) return;
