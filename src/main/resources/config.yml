@@ -2,31 +2,39 @@
 #                   SincePet Configuration
 # ==========================================================
 
-# Thời gian tự động lưu dữ liệu người chơi (tính bằng giây).
-# Đặt 0 để tắt (không khuyến khích).
+# Auto-save player data interval (in seconds).
+# Set to 0 to disable (Not recommended).
 auto-save: 300
 
-# Cấu hình Database (Lưu trữ dữ liệu Pet, Level, v.v.)
+# Database Configuration (For saving Pet Data, Levels, XP, etc.)
 database:
-  # Loại database: "SQLITE" hoặc "MYSQL"
-  # SQLITE: Lưu vào file database.db trong thư mục plugin (Đơn giản, không cần cài đặt).
-  # MYSQL: Lưu vào server MySQL bên ngoài (Tốt cho server lớn hoặc BungeeCord).
+  # Type: "SQLITE" or "MYSQL"
+  # SQLITE: Saved locally as database.db (Easy, no setup).
+  # MYSQL: External remote server (Recommended for BungeeCord/Network).
   type: "SQLITE"
 
-  # Các thông số dưới đây chỉ cần thiết nếu type là MYSQL
+  # MySQL Parameters
   host: "localhost"
   port: "3306"
   database: "minecraft"
   username: "root"
   password: ""
-  
-  # Tên bảng lưu dữ liệu
+
+  # Table name
   table_users: "sincepet_users"
 
-# ==========================================
-# CẤU HÌNH HỆ THỐNG PET
-# ==========================================
+# Pet System Options
 pet:
-  # Cấp độ tối đa mặc định cho tất cả người chơi
-  # Admin có thể chỉnh riêng cho từng người bằng lệnh /sincepet max_level
+  # Default maximum level for pets
   default_max_level: 100
+
+# Visual & Audio Effects Configuration
+effects:
+  spawn:
+    particle: "CLOUD"
+    sound: "ENTITY_CHICKEN_EGG"
+  despawn:
+    particle: "POOF"
+  attack:
+    particle: "CRIT"
+    sound: "ENTITY_PLAYER_ATTACK_SWEEP"

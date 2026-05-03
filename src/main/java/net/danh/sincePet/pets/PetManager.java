@@ -42,14 +42,15 @@ import org.joml.Vector3f;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Handles core logic for pets including spawning, physics, stats, and attacks.
+ */
 public class PetManager {
 
-    // --- CẤU HÌNH VẬT LÝ ---
+    // --- PHYSICS CONSTANTS ---
     private static final float SEAT_OFFSET = 0.7f;
     private static final double PET_WIDTH = 0.6;
     private static final double PET_HEIGHT = 0.8;
-
-    // Physics Constants
     private static final double GRAVITY = 0.08;
     private static final double JUMP_FORCE = 0.6;
     private static final double MOVE_SPEED_GROUND = 0.45;
@@ -67,6 +68,7 @@ public class PetManager {
     private final Map<UUID, float[]> playerInputs = new ConcurrentHashMap<>();
     private final Map<UUID, Vector> currentVelocity = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastAttackTime = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastTargetCheckTime = new ConcurrentHashMap<>(); // TPS Optimizer Throttle
     private final Map<UUID, Double> damageModifiers = new ConcurrentHashMap<>();
     private final Map<UUID, Map<StateFlag, Boolean>> lastFlagStates = new ConcurrentHashMap<>();
     private final Set<UUID> activeBuffs = ConcurrentHashMap.newKeySet();
@@ -146,9 +148,9 @@ public class PetManager {
             updatePetName(d, data, level);
         });
 
-        // HIỆU ỨNG SPAWN
-        p.getWorld().spawnParticle(Particle.CLOUD, spawnLoc, 10, 0.2, 0.2, 0.2, 0.05);
-        p.playSound(spawnLoc, Sound.ENTITY_CHICKEN_EGG, 1f, 1f);
+        // Spawn Visuals & Audio from Config
+        spawnParticleSafe(p.getWorld(), spawnLoc, plugin.getConfigFile().getString("effects.spawn.particle", "CLOUD"), 10);
+        playSoundSafe(p, spawnLoc, plugin.getConfigFile().getString("effects.spawn.sound", "ENTITY_CHICKEN_EGG"));
 
         activePets.put(p.getUniqueId(), pet);
         activePetData.put(p.getUniqueId(), data);
@@ -162,8 +164,7 @@ public class PetManager {
         UUID id = p.getUniqueId();
         ItemDisplay pet = activePets.remove(id);
         if (pet != null) {
-            // HIỆU ỨNG DESPAWN
-            p.getWorld().spawnParticle(Particle.POOF, pet.getLocation(), 5, 0.1, 0.1, 0.1, 0.02);
+            spawnParticleSafe(p.getWorld(), pet.getLocation(), plugin.getConfigFile().getString("effects.despawn.particle", "POOF"), 5);
             pet.remove();
         }
         PetData d = activePetData.remove(id);
@@ -171,6 +172,7 @@ public class PetManager {
 
         playerInputs.remove(id);
         lastAttackTime.remove(id);
+        lastTargetCheckTime.remove(id);
         damageModifiers.remove(id);
         currentVelocity.remove(id);
         activeBuffs.remove(id);
@@ -221,7 +223,7 @@ public class PetManager {
         }
         String name = (data != null) ? data.name() : id;
         target.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.levelup_self").replace("<name>", name).replace("<level>", String.valueOf(newLv))));
-        target.playSound(target.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+        playSoundSafe(target, target.getLocation(), "ENTITY_PLAYER_LEVELUP");
         if (!sender.equals(target))
             sender.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.levelup_other").replace("<target>", target.getName()).replace("<level>", String.valueOf(newLv))));
     }
@@ -242,7 +244,7 @@ public class PetManager {
     private void startPetRunnable() {
         new BukkitRunnable() {
             public void run() {
-                bobbingTick += 0.15; // Tăng tốc độ bobbing nhẹ
+                bobbingTick += 0.15;
                 Iterator<Map.Entry<UUID, ItemDisplay>> it = activePets.entrySet().iterator();
 
                 while (it.hasNext()) {
@@ -269,7 +271,7 @@ public class PetManager {
                     updateStatStatus(p, data);
                     handleAttack(p, pet, data);
 
-                    // ================= LOGIC: RIDING =================
+                    // ================= RIDING LOGIC =================
                     if (pet.getPassengers().contains(p)) {
                         if (!checkFlag(p, WorldGuardHook.PET_RIDE)) {
                             p.sendMessage(getComp("pet.worldguard.auto_dismount"));
@@ -280,7 +282,7 @@ public class PetManager {
                         float[] i = playerInputs.getOrDefault(uuid, new float[]{0, 0, 0});
                         boolean canFly = data.canFly() && checkFlag(p, WorldGuardHook.PET_FLY);
                         Location curLoc = pet.getLocation();
-                        curLoc.setYaw(p.getLocation().getYaw()); // Đồng bộ Yaw
+                        curLoc.setYaw(p.getLocation().getYaw());
 
                         Vector velocity = currentVelocity.getOrDefault(uuid, new Vector(0, 0, 0));
 
@@ -299,7 +301,7 @@ public class PetManager {
 
                             Location target = curLoc.clone().add(velocity);
                             if (!isCollision(target)) curLoc.add(velocity);
-                            else velocity.multiply(0.5); // Giảm tốc khi va chạm
+                            else velocity.multiply(0.5);
 
                         } else {
                             curLoc.setPitch(0);
@@ -335,7 +337,7 @@ public class PetManager {
                         pet.teleport(curLoc);
 
                     } else {
-                        // ================= LOGIC: FOLLOWING =================
+                        // ================= FOLLOWING LOGIC =================
                         handleFollowLogic(p, pet, uuid.hashCode());
                     }
                 }
@@ -355,43 +357,29 @@ public class PetManager {
             return;
         }
 
-        // 1. Tính toán vector khoảng cách
         double dx = p.getLocation().getX() - currentPos.getX();
         double dz = p.getLocation().getZ() - currentPos.getZ();
-        double distSq = (dx * dx) + (dz * dz); // Khoảng cách ngang bình phương
+        double distSq = (dx * dx) + (dz * dz);
 
-        // FIX LỖI: Chỉ xoay khi có khoảng cách đáng kể để tránh NaN (Chia cho 0)
-        // Nếu khoảng cách quá nhỏ (< 0.01), dx và dz gần như bằng 0 -> atan2 không ổn định
+        // Safe yaw rotation to prevent NaN exceptions
         if (distSq > 0.01) {
             float targetYaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
             float newYaw = lerpYaw(currentPos.getYaw(), targetYaw, 0.15f);
-
-            // Kiểm tra an toàn: Chỉ set nếu số hợp lệ (Finite)
-            if (Float.isFinite(newYaw)) {
-                currentPos.setYaw(newYaw);
-            }
+            if (Float.isFinite(newYaw)) currentPos.setYaw(newYaw);
         }
 
-        // Logic di chuyển
         if (currentPos.distanceSquared(targetPos) > 400) {
             pet.setTeleportDuration(0);
             pet.teleport(targetPos);
         } else if (currentPos.distanceSquared(targetPos) > 0.5) {
-            // Chỉ cần lấy hướng vector, không cần normalize để xoay (vì đã xoay ở trên rồi)
             Vector dir = targetPos.toVector().subtract(currentPos.toVector());
             currentPos.add(dir.multiply(0.15));
-
             double hover = Math.sin(bobbingTick + seed) * 0.05;
             currentPos.add(0, hover, 0);
 
             pet.setTeleportDuration(TELEPORT_DURATION);
-
-            // Check Finite lần cuối cho toàn bộ Location
-            if (isValidLocation(currentPos)) {
-                pet.teleport(currentPos);
-            }
+            if (isValidLocation(currentPos)) pet.teleport(currentPos);
         } else {
-            // Đứng yên
             float targetYaw = p.getLocation().getYaw();
             if (Math.abs(currentPos.getYaw() - targetYaw) > 1) {
                 float nextYaw = lerpYaw(currentPos.getYaw(), targetYaw, 0.1f);
@@ -401,18 +389,14 @@ public class PetManager {
             currentPos.add(0, hover, 0);
 
             pet.setTeleportDuration(2);
-            if (isValidLocation(currentPos)) {
-                pet.teleport(currentPos);
-            }
+            if (isValidLocation(currentPos)) pet.teleport(currentPos);
         }
     }
 
-    // Helper: Kiểm tra Location có hợp lệ không
     private boolean isValidLocation(Location loc) {
         return Double.isFinite(loc.getX()) && Double.isFinite(loc.getY()) && Double.isFinite(loc.getZ()) && Float.isFinite(loc.getYaw()) && Float.isFinite(loc.getPitch());
     }
 
-    // Các helper function khác (moveAxis, getFollowTarget, lerpYaw, collision...) GIỮ NGUYÊN
     private void moveAxis(Location loc, Vector vel, boolean onGround) {
         if (Math.abs(vel.getX()) < 0.001 && Math.abs(vel.getZ()) < 0.001) return;
         Location target = loc.clone().add(vel);
@@ -489,6 +473,7 @@ public class PetManager {
         activePetData.remove(uuid);
         playerInputs.remove(uuid);
         lastAttackTime.remove(uuid);
+        lastTargetCheckTime.remove(uuid);
         damageModifiers.remove(uuid);
         currentVelocity.remove(uuid);
         activeBuffs.remove(uuid);
@@ -505,7 +490,6 @@ public class PetManager {
     }
 
     private void updatePetName(ItemDisplay d, PetData data, int lv) {
-        // CHỈNH SỬA: Dùng key từ messages.yml
         d.customName(ColorUtils.parse(getMsg("pet.display.name_format").replace("<name>", data.name()).replace("<level>", String.valueOf(lv))));
     }
 
@@ -542,74 +526,84 @@ public class PetManager {
 
     private void handleAttack(Player p, ItemDisplay pet, PetData data) {
         if (p.getWorld() != pet.getWorld()) return;
-        // 1. Kiểm tra nhanh (Fail-fast)
         if (data.range() <= 0 || !checkFlag(p, WorldGuardHook.PET_ATTACK)) return;
 
-        // 2. Kiểm tra Cooldown
         long now = System.currentTimeMillis();
+        // Check cooldown
         if (now - lastAttackTime.getOrDefault(p.getUniqueId(), 0L) < (long) (data.cooldown() * 1000)) return;
 
-        // 3. Tìm mục tiêu (Targeting)
-        // Lưu ý: getNearbyEntities không quá nặng nếu range nhỏ (< 20), nhưng nên hạn chế gọi liên tục.
-        LivingEntity target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range()).stream().filter(e -> e instanceof Monster && !e.isDead()).map(e -> (LivingEntity) e).min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation()))).orElse(null);
+        // TPS Optimization: Throttle the heavy entity query to once every 500ms when waiting for a target
+        if (now - lastTargetCheckTime.getOrDefault(p.getUniqueId(), 0L) < 500) return;
+        lastTargetCheckTime.put(p.getUniqueId(), now);
+
+        LivingEntity target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range()).stream()
+                .filter(e -> e instanceof Monster && !e.isDead())
+                .map(e -> (LivingEntity) e)
+                .min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation())))
+                .orElse(null);
 
         if (target != null) {
             MMOPlayerData playerData = MMOPlayerData.get(p);
-            // Lấy StatProvider 1 lần dùng cho tất cả các đòn đánh để tiết kiệm tài nguyên
             final StatProvider damager = StatProvider.get(p, EquipmentSlot.MAIN_HAND, true);
 
-            // --- PHẦN 1: SÁT THƯƠNG VẬT LÝ (GỐC) ---
             int lv = getPetLevel(p, data.id());
             double petBaseDmg = Double.parseDouble(Calculator.calculator(data.getDamageFormula().replace("<level>", String.valueOf(lv)), 2));
-
-            // Lấy stat ATTACK_DAMAGE an toàn (tránh null pointer nếu stat map chưa load kịp)
             double playerPhysicalDmg = playerData.getStatMap().getInstance("ATTACK_DAMAGE").getTotal();
             double finalPhysicalDmg = petBaseDmg + (playerPhysicalDmg * data.inheritance());
 
-            // FIX LỖI: Thêm null vào vị trí Element để đánh dấu là Vật lý (Không hệ)
             DamageMetadata physicalMeta = new DamageMetadata(finalPhysicalDmg, (Element) null, DamageType.SKILL, DamageType.PHYSICAL);
 
-            // Đặt NoDamageTicks về 0 trước khi đánh để đảm bảo trúng
             target.setNoDamageTicks(0);
             MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(physicalMeta, target, damager), true, false);
 
-
-            // --- PHẦN 2: SÁT THƯƠNG NGUYÊN TỐ (KẾ THỪA) ---
             for (Element element : MythicLib.plugin.getElements().getAll()) {
                 String statKey = UtilityMethods.enumName(element.getId() + "_DAMAGE");
-                // Kiểm tra nhanh: Nếu không có stat này trong map thì bỏ qua luôn (nhanh hơn gọi .getInstance)
                 if (playerData.getStatMap().getInstance(statKey).isEmpty()) continue;
 
                 double playerElementDmg = playerData.getStatMap().getInstance(statKey).getTotal();
-
                 if (playerElementDmg > 0) {
                     double finalElementDmg = playerElementDmg * data.inheritance();
-
-                    // Tạo damage phép thuật (MAGIC) với hệ tương ứng
                     DamageMetadata elementMeta = new DamageMetadata(finalElementDmg, element, DamageType.SKILL, DamageType.MAGIC);
-
-                    // QUAN TRỌNG: Tiếp tục set 0 để các damage nguyên tố không bị chặn bởi đòn vật lý trước đó
                     target.setNoDamageTicks(0);
                     MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(elementMeta, target, damager), true, false);
                 }
             }
 
-            // --- PHẦN 3: HIỆU ỨNG (VISUALS) ---
-            // Spawn particle và âm thanh (Giữ nguyên vì đã ổn)
+            // Visuals
             Location start = pet.getLocation().add(0, 0.5, 0);
             Location end = target.getEyeLocation();
             Vector dir = end.toVector().subtract(start.toVector()).normalize();
             double dist = start.distance(end);
 
-            // Tối ưu vòng lặp Particle:
-            // Nếu khoảng cách xa, i += 0.5 là OK. Nếu gần, có thể tăng lên 0.8 để giảm số lượng particle client phải render.
-            for (double i = 0; i < dist; i += 0.5) {
-                start.getWorld().spawnParticle(Particle.CRIT, start.clone().add(dir.clone().multiply(i)), 1, 0, 0, 0, 0);
-            }
-            p.playSound(start, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.5f, 2f);
+            String particleConfig = plugin.getConfigFile().getString("effects.attack.particle", "CRIT");
+            spawnParticleSafe(start.getWorld(), start, particleConfig, dir, dist);
+            playSoundSafe(p, start, plugin.getConfigFile().getString("effects.attack.sound", "ENTITY_PLAYER_ATTACK_SWEEP"));
 
-            // Cập nhật thời gian
             lastAttackTime.put(p.getUniqueId(), now);
+        }
+    }
+
+    private void spawnParticleSafe(World world, Location loc, String particleName, int count) {
+        try {
+            world.spawnParticle(Particle.valueOf(particleName), loc, count, 0.2, 0.2, 0.2, 0.05);
+        } catch (IllegalArgumentException ignored) {
+        }
+    }
+
+    private void spawnParticleSafe(World world, Location start, String particleName, Vector dir, double dist) {
+        try {
+            Particle p = Particle.valueOf(particleName);
+            for (double i = 0; i < dist; i += 0.5) {
+                world.spawnParticle(p, start.clone().add(dir.clone().multiply(i)), 1, 0, 0, 0, 0);
+            }
+        } catch (IllegalArgumentException ignored) {
+        }
+    }
+
+    private void playSoundSafe(Player p, Location loc, String soundName) {
+        try {
+            p.playSound(loc, Sound.valueOf(soundName), 1f, 1f);
+        } catch (IllegalArgumentException ignored) {
         }
     }
 
@@ -666,12 +660,8 @@ public class PetManager {
         if (data == null) return;
 
         int currentLevel = s.getLevel(petId);
-
-        // --- THAY ĐỔI Ở ĐÂY ---
-        // Lấy max level của Pet hiện tại (ưu tiên SQL -> Config)
         int maxLevel = s.getMaxPetLevel(petId);
 
-        // Nếu đã Max cấp
         if (currentLevel >= maxLevel) {
             p.sendActionBar(ColorUtils.parse(getMsg("pet.level.max_level_actionbar")));
             return;
@@ -679,21 +669,16 @@ public class PetManager {
 
         double currentXp = s.getXp(petId);
         double newXp = currentXp + amount;
-
-        // Tính Max XP
         double maxXp = Double.parseDouble(Calculator.calculator(data.getMaxXpFormula().replace("<level>", String.valueOf(currentLevel)), 2));
 
-        // Logic Level Up
         while (newXp >= maxXp) {
             if (currentLevel >= maxLevel) {
                 newXp = 0;
                 break;
             }
-
             newXp -= maxXp;
             levelUp(p, p);
-            currentLevel++; // Tăng cấp ảo để check tiếp vòng lặp
-
+            currentLevel++;
             if (currentLevel >= maxLevel) {
                 newXp = 0;
                 break;
@@ -703,7 +688,6 @@ public class PetManager {
 
         s.setXp(petId, newXp);
 
-        // Actionbar XP
         if (currentLevel >= maxLevel) {
             p.sendActionBar(ColorUtils.parse(getMsg("pet.level.max_level_actionbar")));
         } else {

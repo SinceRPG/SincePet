@@ -19,6 +19,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/**
+ * Main class of SincePet. Initializes configs, managers, listeners, and commands.
+ */
 public final class SincePet extends JavaPlugin {
     private static SincePet plugin;
     private MiniMessage miniMessage;
@@ -26,7 +29,6 @@ public final class SincePet extends JavaPlugin {
     private ConfigUtils configFile;
     private ConfigUtils petGuiFile;
     private ConfigUtils petMessagesFile;
-    // Bỏ dataFile vì giờ lưu SQL hết rồi
 
     private PetManager petManager;
     private WorldGuardHook worldGuardHook;
@@ -40,7 +42,7 @@ public final class SincePet extends JavaPlugin {
     @Override
     public void onLoad() {
         plugin = this;
-        // Hooks
+        // Hook into WorldGuard early to register flags safely
         if (getServer().getPluginManager().getPlugin("WorldGuard") != null) {
             worldGuardHook = new WorldGuardHook();
             worldGuardHook.register();
@@ -60,8 +62,6 @@ public final class SincePet extends JavaPlugin {
         // 2. Initialize Data & Managers
         databaseManager = new DatabaseManager(this);
         playerDataHandler = new PlayerDataHandler(this);
-
-        // Init Manager
         petManager = new PetManager(this);
 
         // 3. Register Listeners
@@ -107,7 +107,7 @@ public final class SincePet extends JavaPlugin {
 
     private void registerCommands() {
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
-            // Lệnh /pet (Mở GUI)
+            // /pet command (Open GUI)
             event.registrar().register(Commands.literal("pet")
                     .executes(ctx -> {
                         if (ctx.getSource().getExecutor() instanceof Player p)
@@ -122,7 +122,7 @@ public final class SincePet extends JavaPlugin {
                     }))
                     .build(), "Open Pet GUI");
 
-            // Lệnh /sincepet (Admin)
+            // /sincepet command (Admin)
             event.registrar().register(Commands.literal("sincepet")
                     .requires(s -> s.getSender().hasPermission("sincepet.admin"))
 
@@ -148,9 +148,9 @@ public final class SincePet extends JavaPlugin {
                                             ctx.getSource().getSender().sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.player_not_found")));
                                         return 1;
                                     })))
+                    // 3. MAX LEVEL
                     .then(Commands.literal("max_level")
                             .then(Commands.argument("target", StringArgumentType.word())
-                                    // Gợi ý tên người chơi
                                     .suggests((ctx, builder) -> {
                                         String input = builder.getRemaining().toLowerCase();
                                         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -160,14 +160,9 @@ public final class SincePet extends JavaPlugin {
                                         return builder.buildFuture();
                                     })
                                     .then(Commands.argument("pet", StringArgumentType.word())
-                                            // Gợi ý Pet ID + từ khóa "petall"
                                             .suggests((ctx, builder) -> {
                                                 String input = builder.getRemaining().toLowerCase();
-
-                                                // Thêm gợi ý "petall"
                                                 if ("petall".startsWith(input)) builder.suggest("petall");
-
-                                                // Thêm các ID Pet có sẵn
                                                 for (String id : petManager.getPetConfig().getPets().keySet()) {
                                                     if (id.toLowerCase().startsWith(input)) builder.suggest(id);
                                                 }
@@ -182,7 +177,6 @@ public final class SincePet extends JavaPlugin {
                                                         Player t = Bukkit.getPlayer(targetName);
                                                         var sender = ctx.getSource().getSender();
 
-                                                        // Check Player
                                                         if (t == null) {
                                                             sender.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.player_not_found", "&cPlayer not found!")));
                                                             return 0;
@@ -190,42 +184,35 @@ public final class SincePet extends JavaPlugin {
 
                                                         PlayerDataHandler.PlayerSession s = playerDataHandler.getSession(t.getUniqueId());
                                                         if (s != null) {
-                                                            // === LOGIC MỚI: XỬ LÝ "petall" ===
+                                                            String allString = petMessagesFile.getString("pet.command.all_pets", "All");
+
+                                                            // Handle 'petall' keyword
                                                             if (petId.equalsIgnoreCase("petall")) {
-                                                                // Lặp qua tất cả Pet trong config và set max level
                                                                 for (String id : petManager.getPetConfig().getPets().keySet()) {
                                                                     s.setMaxPetLevel(id, newMax);
                                                                 }
-
-                                                                // Lưu dữ liệu
                                                                 playerDataHandler.saveData(t.getUniqueId(), false);
 
-                                                                // Thông báo (Thay <pet> bằng "Tất cả")
                                                                 sender.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.max_level_pet_success")
                                                                         .replace("<target>", t.getName())
-                                                                        .replace("<pet>", "Tất cả")
+                                                                        .replace("<pet>", allString)
                                                                         .replace("<level>", String.valueOf(newMax))));
 
                                                                 t.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.max_level_pet_receive")
-                                                                        .replace("<pet>", "Tất cả")
+                                                                        .replace("<pet>", allString)
                                                                         .replace("<level>", String.valueOf(newMax))));
-
                                                                 return 1;
                                                             }
-                                                            // ================================
 
-                                                            // Check Pet ID đơn lẻ (Logic cũ)
                                                             if (petManager.getPetConfig().getPet(petId) == null) {
                                                                 sender.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.pet_not_found", "&cPet ID not found!")
                                                                         .replace("<pet>", petId)));
                                                                 return 0;
                                                             }
 
-                                                            // Set Max Level cho 1 pet
                                                             s.setMaxPetLevel(petId, newMax);
                                                             playerDataHandler.saveData(t.getUniqueId(), false);
 
-                                                            // Gửi thông báo
                                                             sender.sendMessage(ColorUtils.parseWithPrefix(petMessagesFile.getString("pet.command.max_level_pet_success")
                                                                     .replace("<target>", t.getName())
                                                                     .replace("<pet>", petId)

@@ -1,77 +1,73 @@
 # =====================================================
 #               SINCE PET - MESSAGES
 # =====================================================
-# Hỗ trợ mã màu & (Legacy) và MiniMessage (<green>, <red>, ...)
-# Dùng <gradient:red:blue>Text</gradient> để tạo màu gradient.
+# Supports Legacy (&) and MiniMessage (<green>, <bold>, etc.)
+# Use <gradient:red:blue>Text</gradient> to create gradient colors.
 
 prefix: "<gray>[<gradient:#00FFAE:#00E0FF><bold>SincePet</bold></gradient><gray>] "
 
 admin:
-  reload: "<green>Đã tải lại cấu hình thành công!"
+  reload: "<green>Successfully reloaded configuration files!"
 
 pet:
   command:
-    spawn: "<green>Đã triệu hồi <name><green>!"
-    despawn: "<yellow>Đã thu hồi Pet."
-    ride_success: "<green>Đang cưỡi Pet! Nhấn SHIFT để xuống."
-    ride_fail: "<red>Bạn chưa triệu hồi Pet nào!"
-    ride_not_allowed: "<red>Pet này không cưỡi được!"
-    levelup_self: "<gold>Chúc mừng! <name> <gold>đã lên cấp <green><level><gold>!"
-    levelup_other: "<green>Đã thăng cấp cho Pet của <target> lên cấp <level>."
-    levelup_fail_target: "<red>Người chơi <target> không có Pet nào đang hoạt động."
+    all_pets: "All"
+    spawn: "<green>Successfully summoned <name><green>!"
+    despawn: "<yellow>Pet despawned and secured."
+    ride_success: "<green>Riding Pet! Press SHIFT to dismount."
+    ride_fail: "<red>You have not summoned any pet!"
+    ride_not_allowed: "<red>This pet is not rideable!"
+    levelup_self: "<gold>Congratulations! <name> <gold>has reached level <green><level><gold>!"
+    levelup_other: "<green>Successfully leveled up <target>'s pet to level <level>."
+    levelup_fail_target: "<red>Player <target> currently has no active pet."
 
-    # --- MESSAGES CHO LỆNH MAX LEVEL ---
-    max_level_success: "&aĐã đặt giới hạn cấp độ Pet của &e<target> &alà &e<level>."
-    max_level_receive: "&aGiới hạn cấp độ Pet của bạn đã được thay đổi thành &e<level>."
+    max_level_success: "&aSuccessfully set the global pet level limit of &e<target> &ato &e<level>."
+    max_level_receive: "&aYour global pet level limit has been updated to &e<level>."
 
-    # Thông báo cho set max level từng pet riêng biệt
-    max_level_pet_success: "&aĐã đặt Max Level cho pet &e<pet> &acủa &e<target> &alà &e<level>."
-    max_level_pet_receive: "&aGiới hạn cấp độ Pet &e<pet> &acủa bạn đã được tăng lên &e<level>."
+    max_level_pet_success: "&aSuccessfully set the max level of &e<pet> &afor &e<target> &ato &e<level>."
+    max_level_pet_receive: "&aYour &e<pet> &amax level has been increased to &e<level>."
 
-    max_level_error_number: "&cSố cấp độ phải là số nguyên lớn hơn 0!"
-    no_permission: "&cBạn không có quyền sử dụng lệnh này!"
-    player_not_found: "&cKhông tìm thấy người chơi này!"
-    pet_not_found: "&cPet ID '<pet>' không tồn tại trong cấu hình!"
+    max_level_error_number: "&cThe level must be a positive integer!"
+    no_permission: "&cYou do not have permission to execute this command!"
+    player_not_found: "&cPlayer not found!"
+    pet_not_found: "&cPet ID '<pet>' does not exist in the configuration!"
 
   level:
-    # Actionbar hiển thị khi Pet nhận XP
-    # Placeholder: <amount>, <current_xp>, <max_xp>
     xp_actionbar: "&a+<amount> XP &8(&7<current_xp>/<max_xp>&8)"
     max_level_actionbar: "&6&lMAX LEVEL"
 
   display:
-    # Tên hiển thị trên đầu Pet
     name_format: "<name> <gray>[Lv.<level>]"
 
   gui:
-    title: "<black><bold>Pet Collection <gray>(Trang <page>)"
+    title: "<black><bold>Pet Collection <gray>(Page <page>)"
     item_name: "<name>"
-    status_unlocked: "<green>Đã sở hữu"
-    status_locked: "<red>Chưa mở khóa"
+    status_unlocked: "<green>Unlocked"
+    status_locked: "<red>Locked"
     item_lore:
       - ""
-      - " <gray>Cấp độ: <white><level>"
-      - " <gray>Chỉ số: <green>+<value> <stat>"
-      - " <gray>Kế thừa DMG: <green><inheritance>%"
+      - " <gray>Level: <white><level>"
+      - " <gray>Stat Bonus: <green>+<value> <stat>"
+      - " <gray>DMG Inheritance: <green><inheritance>%"
       - ""
-      - " <gray>Trạng thái: <status>"
+      - " <gray>Status: <status>"
       - ""
-      - "<yellow>Click để triệu hồi!"
+      - "<yellow>Click to summon!"
 
   worldguard:
-    deny_spawn: "<red>Bạn không thể triệu hồi Pet ở khu vực này!"
-    deny_ride: "<red>Khu vực này cấm cưỡi Pet!"
-    auto_despawn: "<red>Pet của bạn đã bị thu hồi do đi vào khu vực cấm!"
-    auto_dismount: "<red>Bạn bị buộc xuống xe do đi vào khu vực cấm cưỡi!"
+    deny_spawn: "<red>You cannot summon your pet in this area!"
+    deny_ride: "<red>Riding is prohibited in this region!"
+    auto_despawn: "<red>Your pet has been despawned due to restricted zone entry!"
+    auto_dismount: "<red>You were forced to dismount (Restricted Area)!"
 
   notifications:
-    enter_deny_spawn: "<red>Bạn đã đi vào khu vực cấm Pet!"
-    leave_deny_spawn: "<green>Bạn đã rời khỏi khu vực cấm Pet."
-    enter_deny_ride: "<red>Bạn đã đi vào khu vực cấm cưỡi Pet!"
-    leave_deny_ride: "<green>Bạn được phép cưỡi Pet trở lại."
-    enter_deny_fly: "<red>Pet của bạn bị mất khả năng bay ở đây!"
-    leave_deny_fly: "<green>Pet có thể bay trở lại."
-    enter_deny_attack: "<red>Pet sẽ không tấn công ở khu vực này."
-    leave_deny_attack: "<green>Pet đã sẵn sàng chiến đấu."
-    enter_deny_buff: "<red>Hiệu ứng Pet bị vô hiệu hóa tại đây."
-    leave_deny_buff: "<green>Hiệu ứng Pet đã kích hoạt lại."
+    enter_deny_spawn: "<red>You have entered a Pet-Restricted zone!"
+    leave_deny_spawn: "<green>You have left the Pet-Restricted zone."
+    enter_deny_ride: "<red>You have entered a No-Ride zone!"
+    leave_deny_ride: "<green>You are permitted to ride pets again."
+    enter_deny_fly: "<red>Your pet has lost its flying ability here!"
+    leave_deny_fly: "<green>Your pet can fly again."
+    enter_deny_attack: "<red>Your pet will not attack in this area."
+    leave_deny_attack: "<green>Your pet is ready for combat."
+    enter_deny_buff: "<red>Pet buffs are disabled here."
+    leave_deny_buff: "<green>Pet buffs are active again."

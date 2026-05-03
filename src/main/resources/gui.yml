@@ -1,28 +1,22 @@
-# Cấu hình viền GUI
 border:
   material: "BLACK_STAINED_GLASS_PANE"
   name: " "
-  # Custom Model Data (Dành cho Resource Pack), đặt 0 nếu không dùng
   model_data: 0
 
-# Các nút chức năng
 buttons:
-  # Nút thu hồi Pet
   remove:
     slot: 49
     material: "BARRIER"
-    name: "<red><b>Thu Hồi Pet"
+    name: "<red><b>Despawn Pet"
     lore:
-      - "<gray>Click để cất Pet đi"
+      - "<gray>Click to dismiss your active pet"
 
-  # Nút trang trước
   previous:
     slot: 45
     material: "ARROW"
-    name: "<yellow>Trang trước"
+    name: "<yellow>Previous Page"
 
-  # Nút trang sau
   next:
     slot: 53
     material: "ARROW"
-    name: "<yellow>Trang sau"
+    name: "<yellow>Next Page"
