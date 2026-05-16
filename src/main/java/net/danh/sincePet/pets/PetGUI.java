@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.UUID;
 
 public class PetGUI implements InventoryHolder {
+    private static final int INVENTORY_SIZE = 54;
+    private static final int ITEMS_PER_PAGE = 45;
+
     private final SincePet plugin;
     private final int page;
     private Inventory inv;
@@ -41,136 +44,137 @@ public class PetGUI implements InventoryHolder {
         ConfigUtils messages = plugin.getPetMessagesFile();
 
         String titleRaw = messages.getString("pet.gui.title", "Pet Menu <page>").replace("<page>", String.valueOf(page));
-        this.inv = Bukkit.createInventory(this, 54, ColorUtils.parse(titleRaw));
+        this.inv = Bukkit.createInventory(this, INVENTORY_SIZE, ColorUtils.parse(titleRaw));
 
-        // Get viewable pets for this player
-        List<PetData> allPets = new ArrayList<>(plugin.getPetManager().getPetConfig().getAllPets());
-        List<PetData> viewablePets = new ArrayList<>();
-
-        // Logic quyền hạn: Lấy tất cả nếu có quyền hasall hoặc quyền riêng
-        boolean hasAllPerm = p.hasPermission("pet.hasall");
-        for (PetData pet : allPets) {
-            if (hasAllPerm || p.hasPermission("pet." + pet.id().toLowerCase())) {
-                viewablePets.add(pet);
-            }
-        }
-
-        // --- BORDER LOGIC (45-53) ---
-        ItemStack borderItem = new ItemStack(Material.valueOf(gui.getString("border.material", "BLACK_STAINED_GLASS_PANE")));
-        ItemMeta borderMeta = borderItem.getItemMeta();
-        borderMeta.displayName(ColorUtils.parse(gui.getString("border.name", " ")));
-        if (gui.getInt("border.model_data") > 0) {
-            int modelId = gui.getInt("border.model_data");
-            try {
-                // Paper 1.20.5+ API
-                CustomModelDataComponent modelComp = borderMeta.getCustomModelDataComponent();
-                modelComp.setFloats(List.of((float) modelId));
-                borderMeta.setCustomModelDataComponent(modelComp);
-            } catch (NoSuchMethodError e) {
-                // Fallback for older API
-                borderMeta.setCustomModelData(modelId);
-            }
-        }
-        borderItem.setItemMeta(borderMeta);
-        for (int i = 45; i < 54; i++) inv.setItem(i, borderItem);
-
-        // --- PAGINATION LOGIC ---
-        int itemsPerPage = 45;
-        int totalPets = viewablePets.size();
-        int totalPages = (int) Math.ceil((double) totalPets / itemsPerPage);
-        if (totalPages == 0) totalPages = 1;
-
-        int startIndex = (page - 1) * itemsPerPage;
-        int endIndex = Math.min(startIndex + itemsPerPage, totalPets);
-
-        int slot = 0;
-        for (int i = startIndex; i < endIndex; i++) {
-            PetData data = viewablePets.get(i);
-            int specificLevel = plugin.getPetManager().getPetLevel(p, data.id());
-
-            // --- TẠO ICON PET (SKULL LOGIC) ---
-            ItemStack icon;
-            if (data.texture() != null && !data.texture().isEmpty()) {
-                // Nếu có texture -> Tạo đầu người chơi
-                icon = new ItemStack(Material.PLAYER_HEAD);
-                SkullMeta skullMeta = (SkullMeta) icon.getItemMeta();
-
-                // Tạo Profile từ Base64
-                PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
-                profile.setProperty(new ProfileProperty("textures", data.texture()));
-                skullMeta.setPlayerProfile(profile);
-
-                icon.setItemMeta(skullMeta);
-            } else {
-                // Nếu không -> Dùng giấy
-                icon = new ItemStack(Material.PAPER);
-            }
-
-            // --- META LOGIC (Tên, Lore, ModelData) ---
-            ItemMeta meta = icon.getItemMeta();
-            String nameFmt = messages.getString("pet.gui.item_name", "<name>");
-            meta.displayName(ColorUtils.parse(nameFmt.replace("<name>", data.name())));
-
-            // Model Data (nếu cần dùng resource pack cho item giấy)
-            // if (gui.getInt("item_model_data") > 0) meta.setCustomModelData(...)
-
-            double buffValue = 0;
-            try {
-                String f = data.formula().replace("<level>", String.valueOf(specificLevel));
-                buffValue = Double.parseDouble(Calculator.calculator(f, 2));
-            } catch (Exception ignored) {
-            }
-
-            String buffDisplay = (buffValue % 1 == 0) ? String.valueOf((int) buffValue) : String.format("%.2f", buffValue);
-            String inheritanceStr = String.valueOf((int) (data.inheritance() * 100));
-            String statusLine = messages.getString("pet.gui.status_unlocked", "Unlocked");
-
-            List<String> loreRaw = messages.getStringList("pet.gui.item_lore");
-            List<Component> lore = new ArrayList<>();
-            for (String line : loreRaw) {
-                lore.add(ColorUtils.parse(line
-                        .replace("<id>", data.id())
-                        .replace("<level>", String.valueOf(specificLevel))
-                        .replace("<stat>", data.stat())
-                        .replace("<value>", buffDisplay)
-                        .replace("<formula>", data.formula())
-                        .replace("<inheritance>", inheritanceStr)
-                        .replace("<status>", statusLine)));
-            }
-            meta.lore(lore);
-            icon.setItemMeta(meta);
-            inv.setItem(slot++, icon);
-        }
-
-        // --- BUTTONS ---
-        setButton(gui, "buttons.remove", 49, inv);
-
-        if (page > 1) {
-            setButton(gui, "buttons.previous", 45, inv);
-        }
-
-        if (page < totalPages) {
-            setButton(gui, "buttons.next", 53, inv);
-        }
+        List<PetData> viewablePets = getViewablePets(p);
+        setBorder(gui);
+        setPetIcons(p, messages, viewablePets);
+        setNavigationButtons(gui, viewablePets.size());
 
         p.openInventory(inv);
     }
 
+    private List<PetData> getViewablePets(Player p) {
+        List<PetData> viewablePets = new ArrayList<>();
+        boolean hasAllPerm = p.hasPermission("pet.hasall");
+        for (PetData pet : plugin.getPetManager().getPetConfig().getAllPets()) {
+            if (hasAllPerm || p.hasPermission("pet." + pet.id().toLowerCase())) {
+                viewablePets.add(pet);
+            }
+        }
+        return viewablePets;
+    }
+
+    private void setBorder(ConfigUtils gui) {
+        ItemStack borderItem = new ItemStack(parseMaterial(gui.getString("border.material", "BLACK_STAINED_GLASS_PANE"), Material.BLACK_STAINED_GLASS_PANE));
+        ItemMeta borderMeta = borderItem.getItemMeta();
+        borderMeta.displayName(ColorUtils.parse(gui.getString("border.name", " ")));
+        applyModelData(borderMeta, gui.getInt("border.model_data"));
+        borderItem.setItemMeta(borderMeta);
+        for (int i = 45; i < INVENTORY_SIZE; i++) inv.setItem(i, borderItem);
+    }
+
+    private void setPetIcons(Player p, ConfigUtils messages, List<PetData> viewablePets) {
+        int totalPets = viewablePets.size();
+        int startIndex = (page - 1) * ITEMS_PER_PAGE;
+        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalPets);
+
+        int slot = 0;
+        for (int i = startIndex; i < endIndex; i++) {
+            PetData data = viewablePets.get(i);
+            int level = plugin.getPetManager().getPetLevel(p, data.id());
+            inv.setItem(slot++, createPetIcon(messages, data, level));
+        }
+    }
+
+    private ItemStack createPetIcon(ConfigUtils messages, PetData data, int level) {
+        ItemStack icon = createIconBase(data);
+        ItemMeta meta = icon.getItemMeta();
+        String nameFmt = messages.getString("pet.gui.item_name", "<name>");
+        meta.displayName(ColorUtils.parse(nameFmt.replace("<name>", data.name())));
+
+        double buffValue = 0;
+        try {
+            String formula = data.formula().replace("<level>", String.valueOf(level));
+            buffValue = Double.parseDouble(Calculator.calculator(formula, 2));
+        } catch (NumberFormatException ignored) {
+        }
+
+        String buffDisplay = (buffValue % 1 == 0) ? String.valueOf((int) buffValue) : String.format("%.2f", buffValue);
+        String inheritanceStr = String.valueOf((int) (data.inheritance() * 100));
+        String statusLine = messages.getString("pet.gui.status_unlocked", "Unlocked");
+
+        List<Component> lore = new ArrayList<>();
+        for (String line : messages.getStringList("pet.gui.item_lore")) {
+            lore.add(ColorUtils.parse(line
+                    .replace("<id>", data.id())
+                    .replace("<level>", String.valueOf(level))
+                    .replace("<stat>", data.stat())
+                    .replace("<value>", buffDisplay)
+                    .replace("<formula>", data.formula())
+                    .replace("<inheritance>", inheritanceStr)
+                    .replace("<status>", statusLine)));
+        }
+        meta.lore(lore);
+        icon.setItemMeta(meta);
+        return icon;
+    }
+
+    private ItemStack createIconBase(PetData data) {
+        if (data.texture() == null || data.texture().isEmpty()) {
+            return new ItemStack(Material.PAPER);
+        }
+
+        ItemStack icon = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta skullMeta = (SkullMeta) icon.getItemMeta();
+        PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
+        profile.setProperty(new ProfileProperty("textures", data.texture()));
+        skullMeta.setPlayerProfile(profile);
+        icon.setItemMeta(skullMeta);
+        return icon;
+    }
+
+    private void setNavigationButtons(ConfigUtils gui, int totalPets) {
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalPets / ITEMS_PER_PAGE));
+        setButton(gui, "buttons.remove", 49, inv);
+        if (page > 1) setButton(gui, "buttons.previous", 45, inv);
+        if (page < totalPages) setButton(gui, "buttons.next", 53, inv);
+    }
+
     private void setButton(ConfigUtils config, String path, int defaultSlot, Inventory inv) {
         int slot = config.getInt(path + ".slot", defaultSlot);
-        ItemStack item = new ItemStack(Material.valueOf(config.getString(path + ".material", "ARROW")));
+        ItemStack item = new ItemStack(parseMaterial(config.getString(path + ".material", "ARROW"), Material.ARROW));
         ItemMeta meta = item.getItemMeta();
         meta.displayName(ColorUtils.parse(config.getString(path + ".name", "Button")));
 
         List<String> loreList = config.getStringList(path + ".lore");
         if (!loreList.isEmpty()) {
             List<Component> lore = new ArrayList<>();
-            for (String l : loreList) lore.add(ColorUtils.parse(l));
+            for (String line : loreList) lore.add(ColorUtils.parse(line));
             meta.lore(lore);
         }
 
         item.setItemMeta(meta);
         inv.setItem(slot, item);
+    }
+
+    private Material parseMaterial(String name, Material fallback) {
+        try {
+            return Material.valueOf(name.toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+            return fallback;
+        }
+    }
+
+    private void applyModelData(ItemMeta meta, int modelId) {
+        if (modelId <= 0) return;
+        try {
+            CustomModelDataComponent modelComp = meta.getCustomModelDataComponent();
+            modelComp.setFloats(List.of((float) modelId));
+            meta.setCustomModelDataComponent(modelComp);
+        } catch (NoSuchMethodError e) {
+            meta.setCustomModelData(modelId);
+        }
     }
 
     @Override

@@ -12,7 +12,7 @@ public class PetExpDrop extends PetMythicDrop {
 
     public PetExpDrop(@NotNull MythicLineConfig config) {
         super(config);
-        // Lấy giá trị xp từ config: pet-xp{xp=100} hoặc pet-xp{amount=100}
+        // Supports pet-xp{xp=100}, pet-xp{amount=100}, and pet-xp{a=100}.
         this.xpString = config.getString(new String[]{"xp", "amount", "a"}, "0");
     }
 
@@ -26,7 +26,6 @@ public class PetExpDrop extends PetMythicDrop {
 
     @Override
     protected void giveReward(Player p, Location loc, double expAmount) {
-        // Gọi hàm addExp của PetManager
         SincePet.getPlugin().getPetManager().addExp(p, expAmount);
     }
 }

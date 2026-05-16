@@ -2,7 +2,13 @@ package net.danh.sincePet.utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,16 +16,15 @@ import java.util.EnumSet;
 
 public class WorldUtils {
 
-    // Danh sách file không copy (để tránh lỗi world UID)
+    // Files that must not be copied because they contain world runtime identity or locks.
     private static final ArrayList<String> IGNORE_FILES = new ArrayList<>(Arrays.asList("uid.dat", "session.lock"));
 
     /**
-     * Copy world sử dụng Java NIO (Nhanh hơn IO truyền thống)
+     * Copies a world using Java NIO.
      */
     public static boolean copyWorld(File source, File target) {
         if (!source.exists()) return false;
         try {
-            // Sử dụng Files.walkFileTree để duyệt cây thư mục hiệu quả
             Files.walkFileTree(source.toPath(), EnumSet.noneOf(FileVisitOption.class), Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
@@ -34,7 +39,6 @@ public class WorldUtils {
 
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    // Bỏ qua các file trong danh sách đen
                     if (IGNORE_FILES.contains(file.getFileName().toString())) {
                         return FileVisitResult.CONTINUE;
                     }
@@ -50,7 +54,7 @@ public class WorldUtils {
     }
 
     /**
-     * Xóa world đệ quy an toàn
+     * Deletes a world directory recursively.
      */
     public static boolean deleteWorld(File path) {
         if (!path.exists()) return true;
@@ -68,7 +72,7 @@ public class WorldUtils {
                     return FileVisitResult.CONTINUE;
                 }
             });
-            return true; // Xóa thành công
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
             return false;

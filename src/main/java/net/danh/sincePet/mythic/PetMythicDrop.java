@@ -22,7 +22,7 @@ public abstract class PetMythicDrop implements ILocationDrop {
     private int maxLvl = 0;
 
     public PetMythicDrop(MythicLineConfig config) {
-        // Cấu hình range: range=10-20, range=>=50, ...
+        // Supported range formats: range=10-20, range=>=50, range=<20, etc.
         String range = config.getString(new String[]{"range", "r"}, null);
         if (range == null || range.isEmpty()) {
             this.rangeType = RangeType.NONE;
@@ -57,7 +57,7 @@ public abstract class PetMythicDrop implements ILocationDrop {
     protected abstract void giveReward(Player p, Location loc, double expAmount);
 
     protected double calculateExp(String expFormulaInput, int mobLevel, int petLevel) {
-        // Thay thế placeholder trong công thức
+        // Replace MythicMobs placeholders before calculating the reward.
         String expFormula = expFormulaInput
                 .replace("<mob_level>", String.valueOf(mobLevel))
                 .replace("<pet_level>", String.valueOf(petLevel));
@@ -89,16 +89,13 @@ public abstract class PetMythicDrop implements ILocationDrop {
             Player p = Bukkit.getPlayer(abstractEntity.get().getName());
             if (p == null) return;
 
-            // Kiểm tra Player có Pet không
             PlayerDataHandler.PlayerSession session = SincePet.getPlugin().getPlayerDataHandler().getSession(p.getUniqueId());
             if (session == null || session.getActivePetId() == null) return;
 
-            // Lấy thông tin Level
             int mobLevel = (int) skillCaster.get().getLevel();
             int petLevel = session.getLevel(session.getActivePetId());
             int playerLevel = p.getLevel();
 
-            // Check Range O(1)
             if (checkRange(petLevel) || checkRange(playerLevel)) {
 
                 Location location = new Location(

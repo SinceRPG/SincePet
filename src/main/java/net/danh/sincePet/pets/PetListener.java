@@ -66,13 +66,14 @@ public class PetListener implements Listener {
             var allPets = new ArrayList<>(plugin.getPetManager().getPetConfig().getAllPets());
             var viewablePets = new ArrayList<PetData>();
 
+            boolean hasAllPerm = p.hasPermission("pet.hasall");
             for (PetData pet : allPets) {
-                if (p.hasPermission("pet." + pet.id().toLowerCase())) {
+                if (hasAllPerm || p.hasPermission("pet." + pet.id().toLowerCase())) {
                     viewablePets.add(pet);
                 }
             }
 
-            int totalPages = (int) Math.ceil((double) viewablePets.size() / 45);
+            int totalPages = Math.max(1, (int) Math.ceil((double) viewablePets.size() / 45));
             if (slot == nextSlot && currentPage < totalPages) {
                 new PetGUI(plugin, currentPage + 1).open(p);
                 return;

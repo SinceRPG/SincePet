@@ -3,7 +3,7 @@ package net.danh.sincePet.data;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import net.danh.sincePet.SincePet;
-import org.bukkit.Bukkit;
+import net.danh.sincePet.utils.SchedulerUtils;
 
 import java.io.File;
 import java.sql.Connection;
@@ -17,8 +17,7 @@ public class DatabaseManager {
     public DatabaseManager(SincePet plugin) {
         this.plugin = plugin;
         setupDataSource();
-        // CHỈNH SỬA: Chạy tạo bảng bất đồng bộ để tránh lag server khi khởi động
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, this::createTables);
+        SchedulerUtils.runAsync(plugin, this::createTables);
     }
 
     private void setupDataSource() {
@@ -40,8 +39,8 @@ public class DatabaseManager {
         }
 
         config.setPoolName("SincePet-Pool");
-        config.setMaximumPoolSize(10);
-        config.setConnectionTimeout(5000); // 5s timeout
+        config.setMaximumPoolSize(plugin.getConfigFile().getConfig().getInt("database.pool.maximum_size", 10));
+        config.setConnectionTimeout(plugin.getConfigFile().getConfig().getLong("database.pool.connection_timeout_ms", 5000));
         this.dataSource = new HikariDataSource(config);
     }
 
@@ -57,29 +56,20 @@ public class DatabaseManager {
     private void createTables() {
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
             String usersTable = getUsersTable();
-
-            // CẬP NHẬT: Thêm cột pet_max_levels vào câu lệnh tạo bảng
             String sqlUsers = "CREATE TABLE IF NOT EXISTS " + usersTable + " (" +
                     "uuid VARCHAR(36) PRIMARY KEY, " +
                     "active_pet VARCHAR(64), " +
                     "pet_levels TEXT, " +
                     "pet_xp TEXT, " +
-                    "pet_max_levels TEXT" + // <-- MỚI: Cột lưu trữ Max Level riêng từng pet
+                    "pet_max_levels TEXT" +
                     ");";
 
             stmt.execute(sqlUsers);
-
-            // --- TỰ ĐỘNG CẬP NHẬT BẢNG CŨ (MIGRATION) ---
-            // Kiểm tra xem cột pet_max_levels đã có chưa, nếu chưa thì thêm vào (dành cho file cũ)
-            // Logic này giúp bạn không cần xóa file database.db cũ đi
             try {
-                // Thử thêm cột (nếu đã có thì sẽ báo lỗi và rơi vào catch -> không sao cả)
                 stmt.execute("ALTER TABLE " + usersTable + " ADD COLUMN pet_max_levels TEXT;");
                 plugin.getLogger().info("Successfully updated database: Added 'pet_max_levels' column.");
             } catch (SQLException ignored) {
-                // Cột đã tồn tại hoặc không hỗ trợ, bỏ qua
             }
-
         } catch (SQLException e) {
             plugin.getLogger().severe("Could not create or update database tables!");
             e.printStackTrace();

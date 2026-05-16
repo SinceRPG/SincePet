@@ -23,10 +23,53 @@ database:
   # Table name
   table_users: "sincepet_users"
 
+  # Connection pool limits
+  pool:
+    maximum_size: 10
+    connection_timeout_ms: 5000
+
 # Pet System Options
 pet:
   # Default maximum level for pets
   default_max_level: 100
+
+  # Display options keep the head upright and control how large/visible pets are.
+  display:
+    item_transform: "FIXED"
+    billboard: "FIXED"
+    scale: 1.0
+    offset_y: -0.7
+    view_range: 0.8
+
+  # Follow behavior controls the trailing target and smoothing.
+  follow:
+    side_offset: 1.0
+    back_offset: 0.3
+    vertical_offset: -0.2
+    move_lerp: 0.15
+    idle_lerp: 0.1
+    bob_amplitude: 0.05
+    idle_bob_amplitude: 0.03
+    bob_speed: 0.15
+
+  # Physics values used while riding pets.
+  physics:
+    seat_offset: 0.7
+    width: 0.6
+    height: 0.8
+    gravity: 0.08
+    jump_force: 0.6
+    ground_speed: 0.45
+    max_step_height: 1.1
+    fly_speed: 0.8
+    fly_acceleration: 0.15
+    fly_friction: 0.85
+    fly_vertical_speed: 0.4
+    teleport_duration: 2
+
+  # Combat scan throttle in milliseconds.
+  attack:
+    target_check_millis: 500
 
 # Visual & Audio Effects Configuration
 effects:

@@ -65,7 +65,7 @@ tasks.withType(JavaCompile).configureEach {
 shadowJar {
     relocate 'com.zaxxer.hikari', 'net.danh.sincepet.libs.hikari'
 
-    // Tên file jar xuất ra (tùy chọn)
+    // Output jar name.
     archiveClassifier.set('')
 }
 

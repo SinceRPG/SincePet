@@ -14,6 +14,7 @@ import net.danh.sincePet.pets.PetListener;
 import net.danh.sincePet.pets.PetManager;
 import net.danh.sincePet.utils.ColorUtils;
 import net.danh.sincePet.utils.ConfigUtils;
+import net.danh.sincePet.utils.SchedulerUtils;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -82,7 +83,7 @@ public final class SincePet extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        Bukkit.getScheduler().cancelTasks(this);
+        SchedulerUtils.cancelAsyncTasks(this);
         if (petManager != null) petManager.disable();
 
         if (playerDataHandler != null) {
@@ -239,9 +240,9 @@ public final class SincePet extends JavaPlugin {
     private void startAutoSaveTask() {
         long seconds = configFile.getConfig().getLong("auto-save", 300);
         if (seconds <= 0) return;
-        Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+        SchedulerUtils.runAsyncTimer(this, () -> {
             if (playerDataHandler != null) playerDataHandler.saveAllAsync();
-        }, seconds * 20L, seconds * 20L);
+        }, seconds, seconds);
     }
 
     public DatabaseManager getDatabaseManager() {

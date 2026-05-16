@@ -20,20 +20,38 @@ import net.danh.sincePet.SincePet;
 import net.danh.sincePet.hooks.WorldGuardHook;
 import net.danh.sincePet.utils.Calculator;
 import net.danh.sincePet.utils.ColorUtils;
+import net.danh.sincePet.utils.SchedulerUtils;
 import net.kyori.adventure.text.Component;
-import org.bukkit.*;
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
+import org.bukkit.Bukkit;
+import org.bukkit.FluidCollisionMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
+import org.bukkit.Registry;
+import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.*;
+import org.bukkit.entity.Display;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.ItemDisplay;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Monster;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -41,26 +59,13 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class PetManager {
 
-    // Physics Engine Core Constants
-    private static final float SEAT_OFFSET = 0.7f;
-    private static final double PET_WIDTH = 0.6;
-    private static final double PET_HEIGHT = 0.8;
-    private static final double GRAVITY = 0.08;
-    private static final double JUMP_FORCE = 0.6;
-    private static final double MOVE_SPEED_GROUND = 0.45;
-    private static final double MAX_STEP_HEIGHT = 1.1;
-    private static final double FLY_SPEED = 0.8;
-    private static final double FLY_ACCEL = 0.15;
-    private static final double FLY_FRICTION = 0.85;
-    private static final double FLY_VERTICAL_SPEED = 0.4;
-    private static final int TELEPORT_DURATION = 2;
-
     private final SincePet plugin;
     private final PetConfig petConfig;
     private final Map<UUID, ItemDisplay> activePets = new ConcurrentHashMap<>();
     private final Map<UUID, PetData> activePetData = new ConcurrentHashMap<>();
     private final Map<UUID, float[]> playerInputs = new ConcurrentHashMap<>();
     private final Map<UUID, Vector> currentVelocity = new ConcurrentHashMap<>();
+    private final Map<UUID, ScheduledTask> petTasks = new ConcurrentHashMap<>();
 
     // TPS Optimizers
     private final Map<UUID, Long> lastAttackTime = new ConcurrentHashMap<>();
@@ -72,14 +77,15 @@ public class PetManager {
 
     private final boolean hasMythicLib;
     private final boolean hasWorldGuard;
+    private PetSettings settings;
     private double bobbingTick = 0;
 
     public PetManager(SincePet plugin) {
         this.plugin = plugin;
         this.petConfig = new PetConfig(plugin);
+        this.settings = PetSettings.load(plugin);
         this.hasMythicLib = Bukkit.getPluginManager().isPluginEnabled("MythicLib");
         this.hasWorldGuard = plugin.getWorldGuardHook() != null;
-        startPetRunnable();
     }
 
     public PetConfig getPetConfig() {
@@ -95,19 +101,18 @@ public class PetManager {
      */
     public void onPlayerJoin(Player p) {
         plugin.getPlayerDataHandler().loadData(p);
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (!p.isOnline()) return;
-                var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
-                if (s != null && s.getActivePetId() != null) {
-                    var data = petConfig.getPet(s.getActivePetId());
-                    if (data != null && p.hasPermission("pet." + data.id().toLowerCase()))
-                        spawnPet(p, data, s.getLevel(data.id()), false);
-                    else s.setActivePetId(null);
+        SchedulerUtils.runEntityDelayed(plugin, p, () -> {
+            if (!p.isOnline()) return;
+            var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+            if (s != null && s.getActivePetId() != null) {
+                var data = petConfig.getPet(s.getActivePetId());
+                if (data != null && p.hasPermission("pet." + data.id().toLowerCase())) {
+                    spawnPet(p, data, s.getLevel(data.id()), false);
+                } else {
+                    s.setActivePetId(null);
                 }
             }
-        }.runTaskLater(plugin, 20L);
+        }, 20L);
     }
 
     /**
@@ -123,6 +128,17 @@ public class PetManager {
      */
     public void disable() {
         for (Player p : Bukkit.getOnlinePlayers()) removePetVisuals(p);
+        for (UUID uuid : petTasks.keySet()) cancelPetTask(uuid);
+        activePets.values().forEach(Entity::remove);
+        activePets.clear();
+        activePetData.clear();
+        playerInputs.clear();
+        currentVelocity.clear();
+        lastAttackTime.clear();
+        lastTargetCheckTime.clear();
+        damageModifiers.clear();
+        lastFlagStates.clear();
+        activeBuffs.clear();
     }
 
     /**
@@ -130,6 +146,7 @@ public class PetManager {
      */
     public void reload() {
         disable();
+        settings = PetSettings.load(plugin);
         petConfig.loadPets();
         for (Player p : Bukkit.getOnlinePlayers()) onPlayerJoin(p);
     }
@@ -147,16 +164,24 @@ public class PetManager {
         var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
         if (s != null) s.setActivePetId(data.id());
 
-        var spawnLoc = p.getLocation().add(0, SEAT_OFFSET, 0);
+        var spawnLoc = p.getLocation().add(0, settings.seatOffset(), 0);
         var pet = p.getWorld().spawn(spawnLoc, ItemDisplay.class, d -> {
             d.setItemStack(getSkull(data.texture()));
-            d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
-            d.setTransformation(new Transformation(new Vector3f(0, -SEAT_OFFSET, 0), new AxisAngle4f(), new Vector3f(1f), new AxisAngle4f()));
-            d.setBillboard(Display.Billboard.FIXED);
-            d.setViewRange(0.6f);
-            d.setTeleportDuration(TELEPORT_DURATION);
+            d.setItemDisplayTransform(settings.itemTransform());
+            d.setTransformation(new Transformation(
+                    new Vector3f(0, settings.displayOffsetY(), 0),
+                    new AxisAngle4f(),
+                    new Vector3f(settings.displayScale()),
+                    new AxisAngle4f()
+            ));
+            d.setBillboard(settings.billboard());
+            d.setViewRange(settings.viewRange());
+            d.setTeleportDuration(settings.teleportDuration());
+            d.setInterpolationDuration(settings.teleportDuration());
+            d.setInterpolationDelay(0);
             d.setPersistent(false);
             d.setCustomNameVisible(true);
+            d.setRotation(p.getLocation().getYaw(), 0);
             updatePetName(d, data, level);
         });
 
@@ -167,6 +192,7 @@ public class PetManager {
         activePetData.put(p.getUniqueId(), data);
         currentVelocity.put(p.getUniqueId(), new Vector(0, 0, 0));
         updateStatStatus(p, data);
+        startPetTask(p, pet);
 
         if (msg) p.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.spawn").replace("<name>", data.name())));
     }
@@ -176,6 +202,7 @@ public class PetManager {
      */
     public void removePetVisuals(Player p) {
         var id = p.getUniqueId();
+        cancelPetTask(id);
         var pet = activePets.remove(id);
         if (pet != null) {
             spawnParticleSafe(p.getWorld(), pet.getLocation(), plugin.getConfigFile().getString("effects.despawn.particle", "POOF"), 5);
@@ -190,6 +217,7 @@ public class PetManager {
         damageModifiers.remove(id);
         currentVelocity.remove(id);
         activeBuffs.remove(id);
+        lastFlagStates.remove(id);
     }
 
     /**
@@ -242,7 +270,8 @@ public class PetManager {
         var data = activePetData.get(target.getUniqueId());
         if (data != null) {
             updateStatStatus(target, data);
-            updatePetName(activePets.get(target.getUniqueId()), data, newLv);
+            ItemDisplay pet = activePets.get(target.getUniqueId());
+            if (pet != null) updatePetName(pet, data, newLv);
         }
         var name = (data != null) ? data.name() : id;
         target.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.levelup_self").replace("<name>", name).replace("<level>", String.valueOf(newLv))));
@@ -266,109 +295,111 @@ public class PetManager {
     // =================================================================
 
     /**
-     * Master repeating task. Handles collision, input vectors, following algorithms, and combat intervals.
+     * Starts a cancellable per-pet tick task instead of one global entity loop.
      */
-    private void startPetRunnable() {
-        new BukkitRunnable() {
-            public void run() {
-                bobbingTick += 0.15;
-                var it = activePets.entrySet().iterator();
+    private void startPetTask(Player owner, ItemDisplay pet) {
+        UUID uuid = owner.getUniqueId();
+        cancelPetTask(uuid);
+        ScheduledTask task = SchedulerUtils.runEntityTimer(plugin, pet, () -> tickPet(uuid, pet), 1L, 1L);
+        petTasks.put(uuid, task);
+    }
 
-                while (it.hasNext()) {
-                    var entry = it.next();
-                    var uuid = entry.getKey();
-                    var pet = entry.getValue();
-                    var p = Bukkit.getPlayer(uuid);
+    private void tickPet(UUID uuid, ItemDisplay pet) {
+        bobbingTick += settings.bobSpeed();
+        Player p = Bukkit.getPlayer(uuid);
 
-                    if (p == null || !p.isOnline() || pet == null || pet.isDead()) {
-                        cleanupEntry(it, uuid, pet);
-                        continue;
-                    }
+        if (p == null || !p.isOnline() || pet == null || pet.isDead() || !pet.isValid()) {
+            cleanupEntry(uuid, pet);
+            return;
+        }
 
-                    checkAndNotifyFlags(p);
-                    var data = activePetData.get(uuid);
-                    if (data == null) continue;
+        checkAndNotifyFlags(p);
+        PetData data = activePetData.get(uuid);
+        if (data == null) return;
 
-                    if (!checkFlag(p, WorldGuardHook.PET_SPAWN)) {
-                        p.sendMessage(getComp("pet.worldguard.auto_despawn"));
-                        cleanupEntry(it, uuid, pet);
-                        continue;
-                    }
+        if (!checkFlag(p, WorldGuardHook.PET_SPAWN)) {
+            p.sendMessage(getComp("pet.worldguard.auto_despawn"));
+            cleanupEntry(uuid, pet);
+            return;
+        }
 
-                    updateStatStatus(p, data);
-                    handleAttack(p, pet, data);
+        updateStatStatus(p, data);
+        handleAttack(p, pet, data);
 
-                    // Riding mechanics execution
-                    if (pet.getPassengers().contains(p)) {
-                        if (!checkFlag(p, WorldGuardHook.PET_RIDE)) {
-                            p.sendMessage(getComp("pet.worldguard.auto_dismount"));
-                            pet.removePassenger(p);
-                            continue;
-                        }
+        if (pet.getPassengers().contains(p)) {
+            handleRideLogic(p, pet, uuid, data);
+        } else {
+            handleFollowLogic(p, pet, uuid.hashCode());
+        }
+    }
 
-                        var i = playerInputs.getOrDefault(uuid, new float[]{0, 0, 0});
-                        boolean canFly = data.canFly() && checkFlag(p, WorldGuardHook.PET_FLY);
-                        var curLoc = pet.getLocation();
-                        curLoc.setYaw(p.getLocation().getYaw());
+    private void handleRideLogic(Player p, ItemDisplay pet, UUID uuid, PetData data) {
+        if (!checkFlag(p, WorldGuardHook.PET_RIDE)) {
+            p.sendMessage(getComp("pet.worldguard.auto_dismount"));
+            pet.removePassenger(p);
+            return;
+        }
 
-                        var velocity = currentVelocity.getOrDefault(uuid, new Vector(0, 0, 0));
+        var input = playerInputs.getOrDefault(uuid, new float[]{0, 0, 0});
+        boolean canFly = data.canFly() && checkFlag(p, WorldGuardHook.PET_FLY);
+        var curLoc = pet.getLocation();
+        curLoc.setYaw(p.getLocation().getYaw());
+        curLoc.setPitch(0);
 
-                        if (canFly) {
-                            curLoc.setPitch(p.getLocation().getPitch());
-                            var desiredVel = new Vector(0, 0, 0);
-                            if (i[0] != 0 || i[1] != 0) {
-                                var dir = p.getLocation().getDirection().normalize();
-                                var left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
-                                desiredVel = dir.multiply(i[0]).add(left.multiply(i[1])).normalize().multiply(FLY_SPEED);
-                            }
-                            if (i[2] > 0) desiredVel.add(new Vector(0, FLY_VERTICAL_SPEED, 0));
+        var velocity = currentVelocity.getOrDefault(uuid, new Vector(0, 0, 0));
 
-                            velocity.multiply(FLY_FRICTION);
-                            velocity.add(desiredVel.multiply(FLY_ACCEL));
-
-                            var target = curLoc.clone().add(velocity);
-                            if (!isCollision(target)) curLoc.add(velocity);
-                            else velocity.multiply(0.5);
-
-                        } else {
-                            curLoc.setPitch(0);
-                            var moveDir = new Vector(0, 0, 0);
-                            if (i[0] != 0 || i[1] != 0) {
-                                var dir = p.getLocation().getDirection().setY(0).normalize();
-                                var left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
-                                moveDir = dir.multiply(i[0]).add(left.multiply(i[1])).normalize().multiply(MOVE_SPEED_GROUND);
-                            }
-
-                            double yVel = velocity.getY();
-                            boolean touchingGround = isTouchingGround(curLoc);
-                            if (touchingGround && yVel <= 0) {
-                                yVel = 0;
-                                alignToGround(curLoc);
-                                if (i[2] > 0) yVel = JUMP_FORCE;
-                            } else {
-                                yVel -= GRAVITY;
-                                if (yVel < -1.5) yVel = -1.5;
-                            }
-                            if (!touchingGround && yVel > 0 && isCollision(curLoc.clone().add(0, yVel, 0))) yVel = 0;
-
-                            velocity.setX(moveDir.getX());
-                            velocity.setZ(moveDir.getZ());
-                            velocity.setY(yVel);
-
-                            curLoc.add(0, velocity.getY(), 0);
-                            moveAxis(curLoc, new Vector(velocity.getX(), 0, 0), touchingGround);
-                            moveAxis(curLoc, new Vector(0, 0, velocity.getZ()), touchingGround);
-                        }
-                        currentVelocity.put(uuid, velocity);
-                        pet.setTeleportDuration(TELEPORT_DURATION);
-                        pet.teleport(curLoc);
-
-                    } else {
-                        handleFollowLogic(p, pet, uuid.hashCode());
-                    }
+        if (canFly) {
+            var desiredVel = new Vector(0, 0, 0);
+            if (input[0] != 0 || input[1] != 0) {
+                var dir = p.getLocation().getDirection().setY(0);
+                if (dir.lengthSquared() > 0) {
+                    dir.normalize();
+                    var left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
+                    desiredVel = dir.multiply(input[0]).add(left.multiply(input[1])).normalize().multiply(settings.flySpeed());
                 }
             }
-        }.runTaskTimer(plugin, 0L, 1L);
+            if (input[2] > 0) desiredVel.add(new Vector(0, settings.flyVerticalSpeed(), 0));
+
+            velocity.multiply(settings.flyFriction());
+            velocity.add(desiredVel.multiply(settings.flyAcceleration()));
+
+            var target = curLoc.clone().add(velocity);
+            if (!isCollision(target)) curLoc.add(velocity);
+            else velocity.multiply(0.5);
+        } else {
+            var moveDir = new Vector(0, 0, 0);
+            if (input[0] != 0 || input[1] != 0) {
+                var dir = p.getLocation().getDirection().setY(0);
+                if (dir.lengthSquared() > 0) {
+                    dir.normalize();
+                    var left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
+                    moveDir = dir.multiply(input[0]).add(left.multiply(input[1])).normalize().multiply(settings.groundSpeed());
+                }
+            }
+
+            double yVel = velocity.getY();
+            boolean touchingGround = isTouchingGround(curLoc);
+            if (touchingGround && yVel <= 0) {
+                yVel = 0;
+                alignToGround(curLoc);
+                if (input[2] > 0) yVel = settings.jumpForce();
+            } else {
+                yVel -= settings.gravity();
+                if (yVel < -1.5) yVel = -1.5;
+            }
+            if (!touchingGround && yVel > 0 && isCollision(curLoc.clone().add(0, yVel, 0))) yVel = 0;
+
+            velocity.setX(moveDir.getX());
+            velocity.setZ(moveDir.getZ());
+            velocity.setY(yVel);
+
+            curLoc.add(0, velocity.getY(), 0);
+            moveAxis(curLoc, new Vector(velocity.getX(), 0, 0), touchingGround);
+            moveAxis(curLoc, new Vector(0, 0, velocity.getZ()), touchingGround);
+        }
+
+        currentVelocity.put(uuid, velocity);
+        teleportPet(pet, curLoc);
     }
 
     /**
@@ -382,7 +413,7 @@ public class PetManager {
         var currentPos = pet.getLocation();
 
         if (targetPos.getWorld() != currentPos.getWorld()) {
-            pet.teleport(targetPos);
+            teleportPet(pet, targetPos, false);
             return;
         }
 
@@ -396,29 +427,27 @@ public class PetManager {
             float newYaw = lerpYaw(currentPos.getYaw(), targetYaw, 0.15f);
             if (Float.isFinite(newYaw)) currentPos.setYaw(newYaw);
         }
+        currentPos.setPitch(0);
 
         if (currentPos.distanceSquared(targetPos) > 400) {
-            pet.setTeleportDuration(0);
-            pet.teleport(targetPos);
+            teleportPet(pet, targetPos, false);
         } else if (currentPos.distanceSquared(targetPos) > 0.5) {
             var dir = targetPos.toVector().subtract(currentPos.toVector());
-            currentPos.add(dir.multiply(0.15));
-            double hover = Math.sin(bobbingTick + seed) * 0.05;
+            currentPos.add(dir.multiply(settings.followLerp()));
+            double hover = Math.sin(bobbingTick + seed) * settings.bobAmplitude();
             currentPos.add(0, hover, 0);
 
-            pet.setTeleportDuration(TELEPORT_DURATION);
-            if (isValidLocation(currentPos)) pet.teleport(currentPos);
+            if (isValidLocation(currentPos)) teleportPet(pet, currentPos);
         } else {
             float targetYaw = p.getLocation().getYaw();
             if (Math.abs(currentPos.getYaw() - targetYaw) > 1) {
-                float nextYaw = lerpYaw(currentPos.getYaw(), targetYaw, 0.1f);
+                float nextYaw = lerpYaw(currentPos.getYaw(), targetYaw, settings.idleLerp());
                 if (Float.isFinite(nextYaw)) currentPos.setYaw(nextYaw);
             }
-            double hover = Math.sin(bobbingTick + seed) * 0.03;
+            double hover = Math.sin(bobbingTick + seed) * settings.idleBobAmplitude();
             currentPos.add(0, hover, 0);
 
-            pet.setTeleportDuration(2);
-            if (isValidLocation(currentPos)) pet.teleport(currentPos);
+            if (isValidLocation(currentPos)) teleportPet(pet, currentPos);
         }
     }
 
@@ -432,7 +461,7 @@ public class PetManager {
         if (!isCollision(target)) {
             loc.add(vel);
         } else if (onGround) {
-            for (double h = 0.5; h <= MAX_STEP_HEIGHT; h += 0.5) {
+            for (double h = 0.5; h <= settings.maxStepHeight(); h += 0.5) {
                 var stepHigh = target.clone().add(0, h, 0);
                 if (!isCollision(stepHigh) && !isCollision(stepHigh.clone().add(0, 1, 0))) {
                     loc.add(vel).add(0, h, 0);
@@ -445,11 +474,17 @@ public class PetManager {
     private Location getFollowTarget(Player p, int seed) {
         var pLoc = p.getLocation();
         var pEye = p.getEyeLocation();
-        var dir = pLoc.getDirection().setY(0).normalize();
+        var dir = pLoc.getDirection().setY(0);
+        if (dir.lengthSquared() == 0) dir = new Vector(0, 0, 1);
+        else dir.normalize();
         var left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
-        double b = Math.sin(bobbingTick + seed) * 0.1;
-        var target = pEye.clone().add(left.multiply(1.0)).subtract(dir.multiply(0.3)).add(0, b - 0.2, 0);
+        double b = Math.sin(bobbingTick + seed) * settings.bobAmplitude();
+        var target = pEye.clone()
+                .add(left.multiply(settings.followSideOffset()))
+                .subtract(dir.multiply(settings.followBackOffset()))
+                .add(0, b + settings.followVerticalOffset(), 0);
         target.setYaw(pLoc.getYaw());
+        target.setPitch(0);
         return target;
     }
 
@@ -461,14 +496,14 @@ public class PetManager {
     }
 
     private boolean isTouchingGround(Location loc) {
-        var box = BoundingBox.of(loc, PET_WIDTH / 2, 0.1, PET_WIDTH / 2);
-        box.shift(0, -SEAT_OFFSET - 0.05, 0);
+        var box = BoundingBox.of(loc, settings.width() / 2, 0.1, settings.width() / 2);
+        box.shift(0, -settings.seatOffset() - 0.05, 0);
         return checkBlockCollision(loc.getWorld(), box);
     }
 
     private boolean isCollision(Location loc) {
-        var box = BoundingBox.of(loc, PET_WIDTH / 2, PET_HEIGHT / 2, PET_WIDTH / 2);
-        box.shift(0, -SEAT_OFFSET + (PET_HEIGHT / 2), 0);
+        var box = BoundingBox.of(loc, settings.width() / 2, settings.height() / 2, settings.width() / 2);
+        box.shift(0, -settings.seatOffset() + (settings.height() / 2), 0);
         return checkBlockCollision(loc.getWorld(), box);
     }
 
@@ -493,12 +528,14 @@ public class PetManager {
     }
 
     private void alignToGround(Location loc) {
-        var res = loc.getWorld().rayTraceBlocks(loc.clone().add(0, 0.5, 0), new Vector(0, -1, 0), SEAT_OFFSET + 1.0, FluidCollisionMode.NEVER, true);
-        if (res != null && res.getHitPosition() != null) loc.setY(res.getHitPosition().getY() + SEAT_OFFSET);
+        var res = loc.getWorld().rayTraceBlocks(loc.clone().add(0, 0.5, 0), new Vector(0, -1, 0), settings.seatOffset() + 1.0, FluidCollisionMode.NEVER, true);
+        if (res != null && res.getHitPosition() != null) loc.setY(res.getHitPosition().getY() + settings.seatOffset());
     }
 
-    private void cleanupEntry(Iterator<Map.Entry<UUID, ItemDisplay>> it, UUID uuid, ItemDisplay pet) {
+    private void cleanupEntry(UUID uuid, ItemDisplay pet) {
+        cancelPetTask(uuid);
         if (pet != null) pet.remove();
+        activePets.remove(uuid);
         activePetData.remove(uuid);
         playerInputs.remove(uuid);
         lastAttackTime.remove(uuid);
@@ -507,7 +544,21 @@ public class PetManager {
         currentVelocity.remove(uuid);
         activeBuffs.remove(uuid);
         lastFlagStates.remove(uuid);
-        it.remove();
+    }
+
+    private void cancelPetTask(UUID uuid) {
+        ScheduledTask task = petTasks.remove(uuid);
+        if (task != null && !task.isCancelled()) task.cancel();
+    }
+
+    private void teleportPet(ItemDisplay pet, Location location) {
+        teleportPet(pet, location, true);
+    }
+
+    private void teleportPet(ItemDisplay pet, Location location, boolean smooth) {
+        location.setPitch(0);
+        pet.setTeleportDuration(smooth ? settings.teleportDuration() : 0);
+        if (isValidLocation(location)) pet.teleport(location);
     }
 
     private String getMsg(String path) {
@@ -561,6 +612,7 @@ public class PetManager {
      * Incorporates TPS safeguarding buffers to prevent recursive entity-checking locks.
      */
     private void handleAttack(Player p, ItemDisplay pet, PetData data) {
+        if (!hasMythicLib) return;
         if (p.getWorld() != pet.getWorld()) return;
         if (data.range() <= 0 || !checkFlag(p, WorldGuardHook.PET_ATTACK)) return;
 
@@ -569,8 +621,7 @@ public class PetManager {
         // Verifying global cooldowns
         if (now - lastAttackTime.getOrDefault(p.getUniqueId(), 0L) < (long) (data.cooldown() * 1000)) return;
 
-        // TPS Optimization: Throttle the heavy entity iteration query to once every 500ms
-        if (now - lastTargetCheckTime.getOrDefault(p.getUniqueId(), 0L) < 500) return;
+        if (now - lastTargetCheckTime.getOrDefault(p.getUniqueId(), 0L) < settings.targetCheckMillis()) return;
         lastTargetCheckTime.put(p.getUniqueId(), now);
 
         var target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range()).stream()
@@ -647,10 +698,17 @@ public class PetManager {
      * Safely triggers a sound packet sent to the specified player.
      */
     private void playSoundSafe(Player p, Location loc, String soundName) {
-        try {
-            p.playSound(loc, Sound.valueOf(soundName), 1f, 1f);
-        } catch (IllegalArgumentException ignored) {
-        }
+        Sound sound = resolveSound(soundName);
+        if (sound != null) p.playSound(loc, sound, 1f, 1f);
+    }
+
+    private Sound resolveSound(String soundName) {
+        if (soundName == null || soundName.isBlank()) return null;
+        String normalized = soundName.toLowerCase().replace('_', '.');
+        NamespacedKey key = normalized.contains(":")
+                ? NamespacedKey.fromString(normalized)
+                : NamespacedKey.minecraft(normalized);
+        return key == null ? null : Registry.SOUNDS.get(key);
     }
 
     /**
