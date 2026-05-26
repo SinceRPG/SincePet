@@ -39,6 +39,7 @@ import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.util.BoundingBox;
@@ -49,6 +50,7 @@ import org.joml.Vector3f;
 
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -62,6 +64,7 @@ public class PetManager {
     private final SincePet plugin;
     private final PetConfig petConfig;
     private final Map<UUID, ItemDisplay> activePets = new ConcurrentHashMap<>();
+    private final Map<UUID, TextDisplay> activePetNames = new ConcurrentHashMap<>();
     private final Map<UUID, PetData> activePetData = new ConcurrentHashMap<>();
     private final Map<UUID, float[]> playerInputs = new ConcurrentHashMap<>();
     private final Map<UUID, Vector> currentVelocity = new ConcurrentHashMap<>();
@@ -130,7 +133,9 @@ public class PetManager {
         for (Player p : Bukkit.getOnlinePlayers()) removePetVisuals(p);
         for (UUID uuid : petTasks.keySet()) cancelPetTask(uuid);
         activePets.values().forEach(Entity::remove);
+        activePetNames.values().forEach(Entity::remove);
         activePets.clear();
+        activePetNames.clear();
         activePetData.clear();
         playerInputs.clear();
         currentVelocity.clear();
@@ -168,27 +173,23 @@ public class PetManager {
         var pet = p.getWorld().spawn(spawnLoc, ItemDisplay.class, d -> {
             d.setItemStack(getSkull(data.texture()));
             d.setItemDisplayTransform(settings.itemTransform());
-            d.setTransformation(new Transformation(
-                    new Vector3f(0, settings.displayOffsetY(), 0),
-                    new AxisAngle4f(),
-                    new Vector3f(settings.displayScale()),
-                    new AxisAngle4f()
-            ));
+            setPetVisualOffset(d, settings.displayOffsetY());
             d.setBillboard(settings.billboard());
             d.setViewRange(settings.viewRange());
             d.setTeleportDuration(settings.teleportDuration());
             d.setInterpolationDuration(settings.teleportDuration());
             d.setInterpolationDelay(0);
             d.setPersistent(false);
-            d.setCustomNameVisible(true);
+            d.setCustomNameVisible(false);
             d.setRotation(p.getLocation().getYaw(), 0);
-            updatePetName(d, data, level);
         });
+        TextDisplay name = spawnNameDisplay(p, spawnLoc, data, level);
 
         spawnParticleSafe(p.getWorld(), spawnLoc, plugin.getConfigFile().getString("effects.spawn.particle", "CLOUD"), 10);
         playSoundSafe(p, spawnLoc, plugin.getConfigFile().getString("effects.spawn.sound", "ENTITY_CHICKEN_EGG"));
 
         activePets.put(p.getUniqueId(), pet);
+        if (name != null) activePetNames.put(p.getUniqueId(), name);
         activePetData.put(p.getUniqueId(), data);
         currentVelocity.put(p.getUniqueId(), new Vector(0, 0, 0));
         updateStatStatus(p, data);
@@ -204,10 +205,12 @@ public class PetManager {
         var id = p.getUniqueId();
         cancelPetTask(id);
         var pet = activePets.remove(id);
+        var name = activePetNames.remove(id);
         if (pet != null) {
             spawnParticleSafe(p.getWorld(), pet.getLocation(), plugin.getConfigFile().getString("effects.despawn.particle", "POOF"), 5);
             pet.remove();
         }
+        if (name != null) name.remove();
         var d = activePetData.remove(id);
         if (d != null) applyStat(p, d, false);
 
@@ -271,7 +274,8 @@ public class PetManager {
         if (data != null) {
             updateStatStatus(target, data);
             ItemDisplay pet = activePets.get(target.getUniqueId());
-            if (pet != null) updatePetName(pet, data, newLv);
+            TextDisplay name = activePetNames.get(target.getUniqueId());
+            if (name != null) updatePetName(name, data, newLv);
         }
         var name = (data != null) ? data.name() : id;
         target.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.levelup_self").replace("<name>", name).replace("<level>", String.valueOf(newLv))));
@@ -288,6 +292,72 @@ public class PetManager {
 
     public boolean isPlayerPet(Entity entity) {
         return activePets.containsValue(entity);
+    }
+
+    public PetData getActivePetData(Player p) {
+        return activePetData.get(p.getUniqueId());
+    }
+
+    public boolean getPetSetting(Player p, String petId, String settingId, boolean fallback) {
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        return s == null ? fallback : s.getSetting(petId, settingId, fallback);
+    }
+
+    public void togglePetSetting(Player p, String settingId) {
+        PetData data = getActivePetData(p);
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        if (data == null || s == null) return;
+        boolean next = !s.getSetting(data.id(), settingId, true);
+        s.setSetting(data.id(), settingId, next);
+        if ("show_name".equals(settingId)) refreshNameDisplay(p, data);
+        if ("stat_buff".equals(settingId)) {
+            applyStat(p, data, false);
+            activeBuffs.remove(p.getUniqueId());
+            updateStatStatus(p, data);
+        }
+        plugin.getPlayerDataHandler().saveData(p.getUniqueId(), false);
+    }
+
+    public int getUpgradeLevel(Player p, PetData data, PetUpgrade upgrade) {
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        return s == null ? 0 : s.getUpgradeLevel(data.id(), upgrade.id());
+    }
+
+    public double getUpgradeStatBonus(Player p, PetData data, PetUpgrade upgrade, int upgradeLevel) {
+        return calculateUpgradeFormula(p, data, upgrade.statFormula(), upgradeLevel);
+    }
+
+    public double getUpgradeDamageBonus(Player p, PetData data, PetUpgrade upgrade, int upgradeLevel) {
+        return calculateUpgradeFormula(p, data, upgrade.damageFormula(), upgradeLevel);
+    }
+
+    public String getResolvedUpgradeRequirement(Player p, PetUpgrade upgrade) {
+        return resolvePlaceholders(p, upgrade.papi());
+    }
+
+    public boolean upgradePet(Player p, PetUpgrade upgrade) {
+        PetData data = getActivePetData(p);
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        if (data == null || s == null) return false;
+        int current = s.getUpgradeLevel(data.id(), upgrade.id());
+        if (current >= upgrade.maxLevel()) {
+            p.sendMessage(getComp("pet.upgrade.maxed"));
+            return false;
+        }
+        if (!checkUpgradeRequirement(p, upgrade)) {
+            p.sendMessage(getComp("pet.upgrade.requirement_failed"));
+            return false;
+        }
+        s.setUpgradeLevel(data.id(), upgrade.id(), current + 1);
+        runUpgradeCommands(p, data, upgrade, current + 1);
+        applyStat(p, data, false);
+        activeBuffs.remove(p.getUniqueId());
+        updateStatStatus(p, data);
+        plugin.getPlayerDataHandler().saveData(p.getUniqueId(), false);
+        p.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.upgrade.success")
+                .replace("<upgrade>", upgrade.name())
+                .replace("<level>", String.valueOf(current + 1))));
+        return true;
     }
 
     // =================================================================
@@ -327,8 +397,10 @@ public class PetManager {
         handleAttack(p, pet, data);
 
         if (pet.getPassengers().contains(p)) {
+            setPetVisualOffset(pet, settings.rideDisplayOffsetY());
             handleRideLogic(p, pet, uuid, data);
         } else {
+            setPetVisualOffset(pet, settings.displayOffsetY());
             handleFollowLogic(p, pet, uuid.hashCode());
         }
     }
@@ -535,6 +607,8 @@ public class PetManager {
     private void cleanupEntry(UUID uuid, ItemDisplay pet) {
         cancelPetTask(uuid);
         if (pet != null) pet.remove();
+        TextDisplay name = activePetNames.remove(uuid);
+        if (name != null) name.remove();
         activePets.remove(uuid);
         activePetData.remove(uuid);
         playerInputs.remove(uuid);
@@ -558,7 +632,30 @@ public class PetManager {
     private void teleportPet(ItemDisplay pet, Location location, boolean smooth) {
         location.setPitch(0);
         pet.setTeleportDuration(smooth ? settings.teleportDuration() : 0);
-        if (isValidLocation(location)) pet.teleport(location);
+        if (isValidLocation(location)) {
+            pet.teleport(location);
+            UUID owner = getOwnerId(pet);
+            if (owner != null) {
+                TextDisplay name = activePetNames.get(owner);
+                if (name != null) teleportName(name, location, smooth, pet.getPassengers().size() > 0);
+            }
+        }
+    }
+
+    private void setPetVisualOffset(ItemDisplay pet, float offsetY) {
+        pet.setTransformation(new Transformation(
+                new Vector3f(0, offsetY, 0),
+                new AxisAngle4f(),
+                new Vector3f(settings.displayScale()),
+                new AxisAngle4f()
+        ));
+    }
+
+    private UUID getOwnerId(ItemDisplay pet) {
+        for (var entry : activePets.entrySet()) {
+            if (entry.getValue().equals(pet)) return entry.getKey();
+        }
+        return null;
     }
 
     private String getMsg(String path) {
@@ -569,8 +666,125 @@ public class PetManager {
         return ColorUtils.parseWithPrefix(getMsg(path));
     }
 
-    private void updatePetName(ItemDisplay d, PetData data, int lv) {
-        d.customName(ColorUtils.parse(getMsg("pet.display.name_format").replace("<name>", data.name()).replace("<level>", String.valueOf(lv))));
+    private TextDisplay spawnNameDisplay(Player owner, Location base, PetData data, int lv) {
+        if (!getPetSetting(owner, data.id(), "show_name", true)) return null;
+        return owner.getWorld().spawn(getNameLocation(base, false), TextDisplay.class, display -> {
+            display.text(getPetName(data, lv));
+            display.setBillboard(Display.Billboard.CENTER);
+            display.setAlignment(TextDisplay.TextAlignment.CENTER);
+            display.setSeeThrough(false);
+            display.setShadowed(true);
+            display.setViewRange(settings.nameViewRange());
+            display.setTeleportDuration(settings.teleportDuration());
+            display.setInterpolationDuration(settings.teleportDuration());
+            display.setInterpolationDelay(0);
+            display.setPersistent(false);
+        });
+    }
+
+    private void updatePetName(TextDisplay d, PetData data, int lv) {
+        d.text(getPetName(data, lv));
+    }
+
+    private Component getPetName(PetData data, int lv) {
+        return ColorUtils.parse(getMsg("pet.display.name_format").replace("<name>", data.name()).replace("<level>", String.valueOf(lv)));
+    }
+
+    private Location getNameLocation(Location base, boolean riding) {
+        return base.clone().add(0, riding ? settings.rideNameOffsetY() : settings.nameOffsetY(), 0);
+    }
+
+    private void teleportName(TextDisplay display, Location petLocation, boolean smooth, boolean riding) {
+        display.setTeleportDuration(smooth ? settings.teleportDuration() : 0);
+        display.teleport(getNameLocation(petLocation, riding));
+    }
+
+    private void refreshNameDisplay(Player p, PetData data) {
+        UUID uuid = p.getUniqueId();
+        TextDisplay old = activePetNames.remove(uuid);
+        if (old != null) old.remove();
+        ItemDisplay pet = activePets.get(uuid);
+        if (pet == null || !getPetSetting(p, data.id(), "show_name", true)) return;
+        TextDisplay created = spawnNameDisplay(p, pet.getLocation(), data, getPetLevel(p, data.id()));
+        if (created != null) activePetNames.put(uuid, created);
+    }
+
+    private double getUpgradeBonus(Player p, PetData data, String type) {
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        if (s == null) return 0;
+        double total = 0;
+        for (PetUpgrade upgrade : data.upgrades()) {
+            int level = s.getUpgradeLevel(data.id(), upgrade.id());
+            if (level <= 0) continue;
+            String formula = "damage".equals(type) ? upgrade.damageFormula() : upgrade.statFormula();
+            try {
+                total += Double.parseDouble(Calculator.calculator(formula
+                        .replace("<level>", String.valueOf(getPetLevel(p, data.id())))
+                        .replace("<upgrade_level>", String.valueOf(level)), 2));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return total;
+    }
+
+    public boolean checkUpgradeRequirement(Player p, PetUpgrade upgrade) {
+        if (upgrade.papi() == null || upgrade.papi().isBlank()) return true;
+        String raw = resolvePlaceholders(p, upgrade.papi());
+        String expected = resolvePlaceholders(p, upgrade.value());
+        double left = parseDouble(raw);
+        double right = parseDouble(expected);
+        return switch (upgrade.compare()) {
+            case ">", "greater" -> left > right;
+            case "<", "less" -> left < right;
+            case "<=", "less_or_equal" -> left <= right;
+            case "=", "==", "equals" -> raw.equalsIgnoreCase(expected) || Double.compare(left, right) == 0;
+            case "!=", "not_equals" -> !raw.equalsIgnoreCase(expected) && Double.compare(left, right) != 0;
+            default -> left >= right;
+        };
+    }
+
+    public String resolvePlaceholders(Player p, String text) {
+        if (text == null) return "";
+        if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) return text;
+        try {
+            Class<?> papi = Class.forName("me.clip.placeholderapi.PlaceholderAPI");
+            return (String) papi.getMethod("setPlaceholders", Player.class, String.class).invoke(null, p, text);
+        } catch (ReflectiveOperationException ignored) {
+            return text;
+        }
+    }
+
+    private double parseDouble(String value) {
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
+    }
+
+    private double calculateUpgradeFormula(Player p, PetData data, String formula, int upgradeLevel) {
+        if (formula == null || formula.isBlank()) return 0;
+        try {
+            return Double.parseDouble(Calculator.calculator(formula
+                    .replace("<level>", String.valueOf(getPetLevel(p, data.id())))
+                    .replace("<upgrade_level>", String.valueOf(upgradeLevel)), 2));
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
+    }
+
+    private void runUpgradeCommands(Player p, PetData data, PetUpgrade upgrade, int level) {
+        List<String> commands = upgrade.commands();
+        if (commands == null || commands.isEmpty()) return;
+        for (String command : commands) {
+            String parsed = resolvePlaceholders(p, command)
+                    .replace("<player>", p.getName())
+                    .replace("<uuid>", p.getUniqueId().toString())
+                    .replace("<pet>", data.id())
+                    .replace("<upgrade>", upgrade.id())
+                    .replace("<level>", String.valueOf(level));
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+        }
     }
 
     /**
@@ -579,7 +793,7 @@ public class PetManager {
     private void updateStatStatus(Player p, PetData d) {
         if (!hasMythicLib) return;
         var uuid = p.getUniqueId();
-        boolean allowed = checkFlag(p, WorldGuardHook.PET_BUFF);
+        boolean allowed = checkFlag(p, WorldGuardHook.PET_BUFF) && getPetSetting(p, d.id(), "stat_buff", true);
         boolean isActive = activeBuffs.contains(uuid);
         if (allowed && !isActive) {
             applyStat(p, d, true);
@@ -597,7 +811,7 @@ public class PetManager {
             var k = "sincepet_bonus";
             if (add) {
                 int lv = getPetLevel(p, d.id());
-                double v = Double.parseDouble(Calculator.calculator(d.formula().replace("<level>", String.valueOf(lv)), 2));
+                double v = Double.parseDouble(Calculator.calculator(d.formula().replace("<level>", String.valueOf(lv)), 2)) + getUpgradeBonus(p, d, "stat");
                 new StatModifier(k, d.stat(), v, ModifierType.FLAT, EquipmentSlot.OTHER, ModifierSource.OTHER).register(pd);
             } else {
                 var i = pd.getStatMap().getInstance(d.stat());
@@ -614,7 +828,7 @@ public class PetManager {
     private void handleAttack(Player p, ItemDisplay pet, PetData data) {
         if (!hasMythicLib) return;
         if (p.getWorld() != pet.getWorld()) return;
-        if (data.range() <= 0 || !checkFlag(p, WorldGuardHook.PET_ATTACK)) return;
+        if (data.range() <= 0 || !checkFlag(p, WorldGuardHook.PET_ATTACK) || !getPetSetting(p, data.id(), "auto_attack", true)) return;
 
         long now = System.currentTimeMillis();
 
@@ -635,7 +849,7 @@ public class PetManager {
             var damager = StatProvider.get(p, EquipmentSlot.MAIN_HAND, true);
 
             int lv = getPetLevel(p, data.id());
-            double petBaseDmg = Double.parseDouble(Calculator.calculator(data.getDamageFormula().replace("<level>", String.valueOf(lv)), 2));
+            double petBaseDmg = Double.parseDouble(Calculator.calculator(data.getDamageFormula().replace("<level>", String.valueOf(lv)), 2)) + getUpgradeBonus(p, data, "damage");
             double playerPhysicalDmg = playerData.getStatMap().getInstance("ATTACK_DAMAGE").getTotal();
             double finalPhysicalDmg = petBaseDmg + (playerPhysicalDmg * data.inheritance());
 

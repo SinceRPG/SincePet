@@ -61,13 +61,25 @@ public class DatabaseManager {
                     "active_pet VARCHAR(64), " +
                     "pet_levels TEXT, " +
                     "pet_xp TEXT, " +
-                    "pet_max_levels TEXT" +
+                    "pet_max_levels TEXT, " +
+                    "pet_upgrades TEXT, " +
+                    "pet_settings TEXT" +
                     ");";
 
             stmt.execute(sqlUsers);
             try {
                 stmt.execute("ALTER TABLE " + usersTable + " ADD COLUMN pet_max_levels TEXT;");
                 plugin.getLogger().info("Successfully updated database: Added 'pet_max_levels' column.");
+            } catch (SQLException ignored) {
+            }
+            try {
+                stmt.execute("ALTER TABLE " + usersTable + " ADD COLUMN pet_upgrades TEXT;");
+                plugin.getLogger().info("Successfully updated database: Added 'pet_upgrades' column.");
+            } catch (SQLException ignored) {
+            }
+            try {
+                stmt.execute("ALTER TABLE " + usersTable + " ADD COLUMN pet_settings TEXT;");
+                plugin.getLogger().info("Successfully updated database: Added 'pet_settings' column.");
             } catch (SQLException ignored) {
             }
         } catch (SQLException e) {

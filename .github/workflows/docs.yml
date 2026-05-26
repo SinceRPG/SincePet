@@ -1,0 +1,49 @@
+name: SincePet Wiki
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: sincepet-wiki
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Wiki
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Wiki Site
+        run: |
+          python docs/build-wiki.py docs wiki
+
+      - name: Upload Wiki Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: wiki
+
+  deploy:
+    name: Deploy Wiki to GitHub Pages
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

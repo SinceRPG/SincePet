@@ -47,11 +47,72 @@ public class PetListener implements Listener {
             int currentPage = gui.getPage();
             var guiConfig = plugin.getPetGuiFile();
 
+            if (gui.getView() == PetGUI.View.DETAIL) {
+                if (slot == guiConfig.getInt("detail.buttons.back.slot", 18)) {
+                    new PetGUI(plugin, 1).open(p);
+                    return;
+                }
+                if (slot == guiConfig.getInt("detail.buttons.ride.slot", 11)) {
+                    if (!gui.isActionVisible(p, "detail.buttons.ride")) return;
+                    plugin.getPetManager().ridePet(p);
+                    p.closeInventory();
+                    return;
+                }
+                if (slot == guiConfig.getInt("detail.buttons.settings.slot", 13)) {
+                    if (!gui.isActionVisible(p, "detail.buttons.settings")) return;
+                    new PetGUI(plugin, 1, PetGUI.View.SETTINGS).open(p);
+                    return;
+                }
+                if (slot == guiConfig.getInt("detail.buttons.upgrades.slot", 15)) {
+                    if (!gui.isActionVisible(p, "detail.buttons.upgrades")) return;
+                    new PetGUI(plugin, 1, PetGUI.View.UPGRADES).open(p);
+                    return;
+                }
+                return;
+            }
+
+            if (gui.getView() == PetGUI.View.SETTINGS) {
+                if (slot == guiConfig.getInt("detail.buttons.back_detail.slot", 18)) {
+                    new PetGUI(plugin, 1, PetGUI.View.DETAIL).open(p);
+                    return;
+                }
+                if (slot == guiConfig.getInt("settings.show_name.slot", 10)) plugin.getPetManager().togglePetSetting(p, "show_name");
+                if (slot == guiConfig.getInt("settings.auto_attack.slot", 12)) plugin.getPetManager().togglePetSetting(p, "auto_attack");
+                if (slot == guiConfig.getInt("settings.stat_buff.slot", 14)) plugin.getPetManager().togglePetSetting(p, "stat_buff");
+                new PetGUI(plugin, 1, PetGUI.View.SETTINGS).open(p);
+                return;
+            }
+
+            if (gui.getView() == PetGUI.View.UPGRADES) {
+                if (slot == guiConfig.getInt("detail.buttons.back_detail.slot", 18) || slot == guiConfig.getInt("detail.buttons.back_detail.slot", 49)) {
+                    new PetGUI(plugin, 1, PetGUI.View.DETAIL).open(p);
+                    return;
+                }
+                PetData active = plugin.getPetManager().getActivePetData(p);
+                if (active == null) return;
+                for (PetUpgrade upgrade : active.upgrades()) {
+                    if (slot == upgrade.slot()) {
+                        plugin.getPetManager().upgradePet(p, upgrade);
+                        new PetGUI(plugin, 1, PetGUI.View.UPGRADES).open(p);
+                        return;
+                    }
+                }
+                return;
+            }
+
             int removeSlot = guiConfig.getInt("buttons.remove.slot", 49);
+            int detailSlot = guiConfig.getInt("buttons.detail.slot", 48);
             int prevSlot = guiConfig.getInt("buttons.previous.slot", 45);
             int nextSlot = guiConfig.getInt("buttons.next.slot", 53);
 
+            if (slot == detailSlot) {
+                if (!gui.isActionVisible(p, "buttons.detail")) return;
+                new PetGUI(plugin, 1, PetGUI.View.DETAIL).open(p);
+                return;
+            }
+
             if (slot == removeSlot) {
+                if (!gui.isActionVisible(p, "buttons.remove")) return;
                 plugin.getPetManager().despawnPet(p);
                 p.closeInventory();
                 p.sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.command.despawn", "Pet despawned.")));

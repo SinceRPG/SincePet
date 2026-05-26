@@ -23,6 +23,10 @@ public class PlayerDataHandler {
     }.getType();
     private static final Type XP_MAP_TYPE = new TypeToken<Map<String, Double>>() {
     }.getType();
+    private static final Type NESTED_INT_MAP_TYPE = new TypeToken<Map<String, Map<String, Integer>>>() {
+    }.getType();
+    private static final Type NESTED_BOOL_MAP_TYPE = new TypeToken<Map<String, Map<String, Boolean>>>() {
+    }.getType();
 
     private final SincePet plugin;
     private final Map<UUID, PlayerSession> sessionMap = new ConcurrentHashMap<>();
@@ -46,6 +50,8 @@ public class PlayerDataHandler {
                             loadedData.petLevels(),
                             loadedData.petXp(),
                             loadedData.petMaxLevels(),
+                            loadedData.petUpgrades(),
+                            loadedData.petSettings(),
                             defaultMax
                     ));
                 }
@@ -58,6 +64,8 @@ public class PlayerDataHandler {
         Map<String, Integer> petLevels = new HashMap<>();
         Map<String, Double> petXp = new HashMap<>();
         Map<String, Integer> petMaxLevels = new HashMap<>();
+        Map<String, Map<String, Integer>> petUpgrades = new HashMap<>();
+        Map<String, Map<String, Boolean>> petSettings = new HashMap<>();
 
         try (Connection conn = plugin.getDatabaseManager().getConnection()) {
             String query = "SELECT * FROM " + plugin.getDatabaseManager().getUsersTable() + " WHERE uuid = ?";
@@ -73,6 +81,16 @@ public class PlayerDataHandler {
                         } catch (SQLException ignored) {
                             plugin.getLogger().warning("Column 'pet_max_levels' is missing. Run the plugin once after updating to migrate the database.");
                         }
+                        try {
+                            petUpgrades = parseMap(rs.getString("pet_upgrades"), NESTED_INT_MAP_TYPE, new HashMap<>());
+                        } catch (SQLException ignored) {
+                            plugin.getLogger().warning("Column 'pet_upgrades' is missing. Run the plugin once after updating to migrate the database.");
+                        }
+                        try {
+                            petSettings = parseMap(rs.getString("pet_settings"), NESTED_BOOL_MAP_TYPE, new HashMap<>());
+                        } catch (SQLException ignored) {
+                            plugin.getLogger().warning("Column 'pet_settings' is missing. Run the plugin once after updating to migrate the database.");
+                        }
                     }
                 }
             }
@@ -81,7 +99,7 @@ public class PlayerDataHandler {
             e.printStackTrace();
         }
 
-        return new LoadedPlayerData(petId, petLevels, petXp, petMaxLevels);
+        return new LoadedPlayerData(petId, petLevels, petXp, petMaxLevels, petUpgrades, petSettings);
     }
 
     private <T> T parseMap(String json, Type type, T fallback) {
@@ -115,8 +133,8 @@ public class PlayerDataHandler {
     private void savePayload(SavePayload payload) {
         try (Connection conn = plugin.getDatabaseManager().getConnection()) {
             String upsert = plugin.getDatabaseManager().isMySQL()
-                    ? "INSERT INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp, pet_max_levels) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE active_pet=VALUES(active_pet), pet_levels=VALUES(pet_levels), pet_xp=VALUES(pet_xp), pet_max_levels=VALUES(pet_max_levels)"
-                    : "INSERT OR REPLACE INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp, pet_max_levels) VALUES (?, ?, ?, ?, ?)";
+                    ? "INSERT INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp, pet_max_levels, pet_upgrades, pet_settings) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE active_pet=VALUES(active_pet), pet_levels=VALUES(pet_levels), pet_xp=VALUES(pet_xp), pet_max_levels=VALUES(pet_max_levels), pet_upgrades=VALUES(pet_upgrades), pet_settings=VALUES(pet_settings)"
+                    : "INSERT OR REPLACE INTO " + plugin.getDatabaseManager().getUsersTable() + " (uuid, active_pet, pet_levels, pet_xp, pet_max_levels, pet_upgrades, pet_settings) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
             try (PreparedStatement ps = conn.prepareStatement(upsert)) {
                 ps.setString(1, payload.uuid().toString());
@@ -124,6 +142,8 @@ public class PlayerDataHandler {
                 ps.setString(3, payload.petLevelsJson());
                 ps.setString(4, payload.petXpJson());
                 ps.setString(5, payload.petMaxLevelsJson());
+                ps.setString(6, payload.petUpgradesJson());
+                ps.setString(7, payload.petSettingsJson());
                 ps.executeUpdate();
             }
         } catch (SQLException e) {
@@ -140,7 +160,9 @@ public class PlayerDataHandler {
             String activePetId,
             Map<String, Integer> petLevels,
             Map<String, Double> petXp,
-            Map<String, Integer> petMaxLevels
+            Map<String, Integer> petMaxLevels,
+            Map<String, Map<String, Integer>> petUpgrades,
+            Map<String, Map<String, Boolean>> petSettings
     ) {
     }
 
@@ -149,7 +171,9 @@ public class PlayerDataHandler {
             String activePetId,
             String petLevelsJson,
             String petXpJson,
-            String petMaxLevelsJson
+            String petMaxLevelsJson,
+            String petUpgradesJson,
+            String petSettingsJson
     ) {
         private static SavePayload from(UUID uuid, PlayerSession session, Gson gson) {
             return new SavePayload(
@@ -157,7 +181,9 @@ public class PlayerDataHandler {
                     session.getActivePetId(),
                     gson.toJson(session.getAllLevels()),
                     gson.toJson(session.getAllXp()),
-                    gson.toJson(session.getAllMaxLevels())
+                    gson.toJson(session.getAllMaxLevels()),
+                    gson.toJson(session.getAllUpgradeLevels()),
+                    gson.toJson(session.getAllSettings())
             );
         }
     }
@@ -166,14 +192,19 @@ public class PlayerDataHandler {
         private final Map<String, Integer> petLevels;
         private final Map<String, Double> petXp;
         private final Map<String, Integer> petMaxLevels;
+        private final Map<String, Map<String, Integer>> petUpgrades;
+        private final Map<String, Map<String, Boolean>> petSettings;
         private final int globalDefaultMax;
         private String activePetId;
 
-        public PlayerSession(String id, Map<String, Integer> lvls, Map<String, Double> xps, Map<String, Integer> maxLvls, int defaultMax) {
+        public PlayerSession(String id, Map<String, Integer> lvls, Map<String, Double> xps, Map<String, Integer> maxLvls,
+                             Map<String, Map<String, Integer>> upgrades, Map<String, Map<String, Boolean>> settings, int defaultMax) {
             this.activePetId = id;
             this.petLevels = new ConcurrentHashMap<>(lvls);
             this.petXp = new ConcurrentHashMap<>(xps);
             this.petMaxLevels = new ConcurrentHashMap<>(maxLvls);
+            this.petUpgrades = new ConcurrentHashMap<>(upgrades);
+            this.petSettings = new ConcurrentHashMap<>(settings);
             this.globalDefaultMax = defaultMax;
         }
 
@@ -219,6 +250,30 @@ public class PlayerDataHandler {
 
         public Map<String, Integer> getAllMaxLevels() {
             return petMaxLevels;
+        }
+
+        public int getUpgradeLevel(String petId, String upgradeId) {
+            return petUpgrades.getOrDefault(petId, Map.of()).getOrDefault(upgradeId, 0);
+        }
+
+        public void setUpgradeLevel(String petId, String upgradeId, int level) {
+            petUpgrades.computeIfAbsent(petId, ignored -> new ConcurrentHashMap<>()).put(upgradeId, level);
+        }
+
+        public Map<String, Map<String, Integer>> getAllUpgradeLevels() {
+            return petUpgrades;
+        }
+
+        public boolean getSetting(String petId, String settingId, boolean fallback) {
+            return petSettings.getOrDefault(petId, Map.of()).getOrDefault(settingId, fallback);
+        }
+
+        public void setSetting(String petId, String settingId, boolean value) {
+            petSettings.computeIfAbsent(petId, ignored -> new ConcurrentHashMap<>()).put(settingId, value);
+        }
+
+        public Map<String, Map<String, Boolean>> getAllSettings() {
+            return petSettings;
         }
     }
 }

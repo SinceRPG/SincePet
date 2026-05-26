@@ -16,6 +16,9 @@ dependencies:
     WorldGuard:
       load: BEFORE
       required: true
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
 permissions:
   sincepet.admin:
     description: SincePet Admin permission

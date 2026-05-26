@@ -3,9 +3,12 @@ package net.danh.sincePet.pets;
 import net.danh.sincePet.SincePet;
 import net.danh.sincePet.utils.ConfigUtils;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.Material;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class PetConfig {
@@ -45,7 +48,38 @@ public class PetConfig {
             // XP progression formula.
             String maxXpFormula = section.getString(path + "max_xp_formula", "100 * <level>");
 
-            pets.put(key, new PetData(key, name, texture, stat, formula, range, cooldown, dmgFormula, inheritance, rideable, canFly, maxXpFormula));
+            pets.put(key, new PetData(key, name, texture, stat, formula, range, cooldown, dmgFormula, inheritance, rideable, canFly, maxXpFormula, loadUpgrades(section.getConfigurationSection(path + "upgrades"))));
+        }
+    }
+
+    private List<PetUpgrade> loadUpgrades(ConfigurationSection section) {
+        List<PetUpgrade> upgrades = new ArrayList<>();
+        if (section == null) return upgrades;
+        for (String key : section.getKeys(false)) {
+            String path = key + ".";
+            upgrades.add(new PetUpgrade(
+                    key,
+                    section.getString(path + "name", key),
+                    parseMaterial(section.getString(path + "material", "NETHER_STAR"), Material.NETHER_STAR),
+                    section.getInt(path + "slot", upgrades.size()),
+                    section.getInt(path + "max_level", 10),
+                    section.getString(path + "stat_bonus_formula", "0"),
+                    section.getString(path + "damage_bonus_formula", "0"),
+                    section.getString(path + "requirement.papi", ""),
+                    section.getString(path + "requirement.compare", ">="),
+                    section.getString(path + "requirement.value", "0"),
+                    section.getString(path + "requirement.display", ""),
+                    section.getStringList(path + "commands")
+            ));
+        }
+        return upgrades;
+    }
+
+    private Material parseMaterial(String name, Material fallback) {
+        try {
+            return Material.valueOf(name.toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+            return fallback;
         }
     }
 

@@ -39,8 +39,19 @@ pet:
   display:
     name_format: "<name> <gray>[Lv.<level>]"
 
+  upgrade:
+    success: "<green>Upgraded <upgrade> <green>to level <level>."
+    maxed: "<red>This upgrade is already maxed."
+    requirement_failed: "<red>You do not meet the upgrade requirement."
+
   gui:
     title: "<black><bold>Pet Collection <gray>(Page <page>)"
+    detail_title: "<black><bold>Pet Detail: <name>"
+    settings_title: "<black><bold>Pet Settings"
+    upgrades_title: "<black><bold>Pet Upgrades"
+    no_active_pet: "<red>No Active Pet"
+    enabled: "<green>ON"
+    disabled: "<red>OFF"
     item_name: "<name>"
     status_unlocked: "<green>Unlocked"
     status_locked: "<red>Locked"
@@ -53,7 +64,6 @@ pet:
       - " <gray>Status: <status>"
       - ""
       - "<yellow>Click to summon!"
-
   worldguard:
     deny_spawn: "<red>You cannot summon your pet in this area!"
     deny_ride: "<red>Riding is prohibited in this region!"

@@ -1,15 +1,32 @@
 border:
   material: "BLACK_STAINED_GLASS_PANE"
+  amount: 1
   name: " "
   model_data: 0
+  glow: false
+  item_flags:
+    - "HIDE_ATTRIBUTES"
 
 buttons:
+  detail:
+    slot: 48
+    material: "BOOK"
+    name: "<aqua><b>Active Pet"
+    lore:
+      - "<gray>Open current pet controls"
+    display:
+      conditions:
+        - "active_pet"
+
   remove:
     slot: 49
     material: "BARRIER"
     name: "<red><b>Despawn Pet"
     lore:
       - "<gray>Click to dismiss your active pet"
+    display:
+      conditions:
+        - "active_pet"
 
   previous:
     slot: 45
@@ -20,3 +37,107 @@ buttons:
     slot: 53
     material: "ARROW"
     name: "<yellow>Next Page"
+
+detail:
+  buttons:
+    back:
+      slot: 18
+      material: "ARROW"
+      name: "<yellow>Back"
+    back_detail:
+      slot: 18
+      material: "ARROW"
+      name: "<yellow>Back"
+    ride:
+      slot: 11
+      material: "SADDLE"
+      name: "<green><b>Ride Pet"
+      lore:
+        - "<gray>Mount your active pet"
+      display:
+        conditions:
+          - "active_pet"
+          - "rideable"
+    settings:
+      slot: 13
+      material: "COMPARATOR"
+      name: "<aqua><b>Pet Settings"
+      display:
+        conditions:
+          - "active_pet"
+    upgrades:
+      slot: 15
+      material: "ANVIL"
+      name: "<gold><b>Pet Upgrades"
+      glow: true
+      display:
+        conditions:
+          - "active_pet"
+          - "has_upgrades"
+
+settings:
+  show_name:
+    slot: 10
+    material: "NAME_TAG"
+    name: "<aqua>Name Display: <state>"
+    item_flags:
+      - "HIDE_ATTRIBUTES"
+  auto_attack:
+    slot: 12
+    material: "IRON_SWORD"
+    name: "<red>Auto Attack: <state>"
+    hide_attributes: true
+  stat_buff:
+    slot: 14
+    material: "BREWING_STAND"
+    name: "<green>Stat Buff: <state>"
+
+upgrade_items:
+  available:
+    # If material is omitted, the upgrade material from pets.yml is used.
+    name: "<gold><upgrade>"
+    glow: true
+    hide_attributes: true
+    lore:
+      - ""
+      - "<gray>Level: <white><level>/<max_level> <dark_gray>(next <next_level>)"
+      - "<gray><requirement>"
+      - "<gray>Your value: <green><current_value>"
+      - ""
+      - "<gray>Stat Bonus: <green><stat_bonus> <dark_gray>-> <green><next_stat_bonus>"
+      - "<gray>Damage Bonus: <red><damage_bonus> <dark_gray>-> <red><next_damage_bonus>"
+      - ""
+      - "<yellow>Click to upgrade!"
+
+  locked:
+    name: "<red><upgrade>"
+    glow: false
+    hide_attributes: true
+    lore:
+      - ""
+      - "<gray>Level: <white><level>/<max_level>"
+      - "<red><requirement>"
+      - "<gray>Your value: <red><current_value>"
+      - ""
+      - "<red>You do not meet the requirement."
+
+  maxed:
+    name: "<green><upgrade>"
+    glow: true
+    hide_attributes: true
+    lore:
+      - ""
+      - "<gray>Level: <gold><level>/<max_level>"
+      - "<gray>Stat Bonus: <green><stat_bonus>"
+      - "<gray>Damage Bonus: <red><damage_bonus>"
+      - ""
+      - "<gold>MAXED"
+
+  # Optional per-upgrade override. Key must match the upgrade id in pets.yml.
+  # items:
+  #   ember:
+  #     material: "FIRE_CHARGE"
+  #     name: "<gradient:red:gold>Custom Ember</gradient>"
+  #     model_data: 1001
+  #     lore:
+  #       - "<gray>Level: <level>/<max_level>"

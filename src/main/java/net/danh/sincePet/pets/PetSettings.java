@@ -30,7 +30,11 @@ public record PetSettings(
         float bobSpeed,
         float displayScale,
         float displayOffsetY,
+        float rideDisplayOffsetY,
+        float nameOffsetY,
+        float rideNameOffsetY,
         float viewRange,
+        float nameViewRange,
         int targetCheckMillis,
         ItemDisplay.ItemDisplayTransform itemTransform,
         Display.Billboard billboard
@@ -60,7 +64,11 @@ public record PetSettings(
                 (float) config.getDouble("pet.follow.bob_speed", 0.15),
                 (float) config.getDouble("pet.display.scale", 1.0),
                 (float) config.getDouble("pet.display.offset_y", -0.7),
+                (float) config.getDouble("pet.display.ride_offset_y", -1.35),
+                (float) config.getDouble("pet.display.name_offset_y", 0.85),
+                (float) config.getDouble("pet.display.ride_name_offset_y", 0.25),
                 (float) config.getDouble("pet.display.view_range", 0.6),
+                (float) config.getDouble("pet.display.name_view_range", 16.0),
                 Math.max(50, config.getInt("pet.attack.target_check_millis", 500)),
                 parseItemTransform(config.getString("pet.display.item_transform", "FIXED")),
                 parseBillboard(config.getString("pet.display.billboard", "FIXED"))
