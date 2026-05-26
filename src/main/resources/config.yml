@@ -38,11 +38,11 @@ pet:
     item_transform: "FIXED"
     billboard: "FIXED"
     scale: 1.0
-    offset_y: -0.7
+    offset_y: 1
     # Visual offset used only while riding. Keep this lower because the mount point is the player's seat.
     ride_offset_y: -1.35
     # Separate TextDisplay name-tag height. This fixes ItemDisplay name offset issues.
-    name_offset_y: 1.25
+    name_offset_y: 1.5
     ride_name_offset_y: 0.25
     view_range: 0.8
     name_view_range: 16.0

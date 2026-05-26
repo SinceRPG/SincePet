@@ -9,11 +9,11 @@
 
 ## Admin Commands
 
-| Command | Description |
-| --- | --- |
-| `/sincepet reload` | Reloads plugin configuration files and refreshes active pets. |
-| `/sincepet levelup <target>` | Levels up the target player's active pet. |
-| `/sincepet max_level <target> <pet|petall> <level>` | Sets the max level for one pet or all pets for the target player. |
+| Command                                             | Description |
+|-----------------------------------------------------| --- |
+| `/sincepet reload`                                  | Reloads plugin configuration files and refreshes active pets. |
+| `/sincepet levelup <target>`                        | Levels up the target player's active pet. |
+| `/sincepet max_level <target> <pet/petall> <level>` | Sets the max level for one pet or all pets for the target player. |
 
 ## Permissions
 
