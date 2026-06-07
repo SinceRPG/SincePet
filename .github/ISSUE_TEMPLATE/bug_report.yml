@@ -20,7 +20,7 @@ body:
     id: plugin-version
     attributes:
       label: SincePet Version
-      description: What version of SincePet are you running?
+      description: What version of SincePet are you running? (Check `/plugins` or the jar name)
       placeholder: 1.0
     validations:
       required: true
@@ -28,7 +28,7 @@ body:
     id: dependencies
     attributes:
       label: Dependencies Versions
-      description: Please list the versions of the required dependencies you are using (MythicLib, MythicMobs, WorldGuard).
+      description: Please list the versions of the required dependencies you are using (MythicLib, MythicMobs, WorldGuard, PlaceholderAPI).
       placeholder: MythicLib v1.7.1, MythicMobs v5.12.0, WorldGuard v7.0.16
     validations:
       required: true
@@ -38,8 +38,8 @@ body:
       label: Database Type
       description: Which database are you using for SincePet?
       options:
-        - SQLite (Local)
-        - MySQL (Remote)
+        - SQLite (Local - database.db)
+        - MySQL (Remote Server)
     validations:
       required: true
   - type: textarea
@@ -54,23 +54,37 @@ body:
     id: steps-to-reproduce
     attributes:
       label: Steps to Reproduce
-      description: Steps to reproduce the behavior.
+      description: Steps to reproduce the behavior. The more detailed, the better!
       placeholder: |
-        1. Spawn a 'PHOENIX' pet.
-        2. Attempt to right-click it to ride.
-        3. See error in console.
+        1. Give myself 20 PlayerPoints.
+        2. Spawn a 'PHOENIX' pet using the command.
+        3. Attempt to upgrade 'Ember Core' in the GUI.
+        4. See error in console and points are not deducted.
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen instead of the bug.
+      placeholder: "The pet should upgrade to Level 1, and 20 points should be deducted from my account."
     validations:
       required: true
   - type: textarea
     id: configuration
     attributes:
       label: Relevant Configuration (pets.yml / config.yml)
-      description: If the issue is related to specific pets, formulas, or physics, please paste the relevant configuration section here. Use code blocks (```yaml).
+      description: If the issue is related to specific pets, formulas, GUI, or physics, please paste the relevant configuration section here. Use code blocks (```yaml).
+      placeholder: |
+        ```yaml
+        # Paste your config here
+        ```
   - type: textarea
     id: errors
     attributes:
       label: Errors / Console Log
       description: If applicable, add a link to pastebin.com or mclo.gs with your server log/error message. Do NOT paste long logs directly here.
+      placeholder: "https://mclo.gs/..."
     validations:
       required: false
   - type: textarea
