@@ -13,7 +13,7 @@ body:
     attributes:
       label: Server Software & Version
       description: What version of Paper/Folia are you running? (Use `/version` command)
-      placeholder: Paper version git-Paper-123 (MC: 1.21.1)
+      placeholder: "Paper version git-Paper-123 (MC: 1.21.1)"
     validations:
       required: true
   - type: input

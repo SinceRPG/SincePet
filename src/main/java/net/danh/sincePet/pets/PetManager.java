@@ -291,7 +291,11 @@ public class PetManager {
     }
 
     public boolean isPlayerPet(Entity entity) {
-        return activePets.containsValue(entity);
+        if (entity == null) return false;
+        for (ItemDisplay pet : activePets.values()) {
+            if (pet.getUniqueId().equals(entity.getUniqueId())) return true;
+        }
+        return false;
     }
 
     public PetData getActivePetData(Player p) {
