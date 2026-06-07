@@ -430,7 +430,7 @@ public class PetManager {
                 var dir = p.getLocation().getDirection().setY(0);
                 if (dir.lengthSquared() > 0) {
                     dir.normalize();
-                    var left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
+                    var left = new Vector(0, 1, 0).crossProduct(dir).normalize();
                     desiredVel = dir.multiply(input[0]).add(left.multiply(input[1])).normalize().multiply(settings.flySpeed());
                 }
             }
@@ -448,7 +448,7 @@ public class PetManager {
                 var dir = p.getLocation().getDirection().setY(0);
                 if (dir.lengthSquared() > 0) {
                     dir.normalize();
-                    var left = dir.clone().crossProduct(new Vector(0, 1, 0)).normalize();
+                    var left = new Vector(0, 1, 0).crossProduct(dir).normalize();
                     moveDir = dir.multiply(input[0]).add(left.multiply(input[1])).normalize().multiply(settings.groundSpeed());
                 }
             }
@@ -579,7 +579,7 @@ public class PetManager {
 
     private boolean isCollision(Location loc) {
         var box = BoundingBox.of(loc, settings.width() / 2, settings.height() / 2, settings.width() / 2);
-        box.shift(0, -settings.seatOffset() + (settings.height() / 2), 0);
+        box.shift(0, -settings.seatOffset() + (settings.height() / 2) + 0.05, 0);
         return checkBlockCollision(loc.getWorld(), box);
     }
 
