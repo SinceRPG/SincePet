@@ -21,7 +21,7 @@ body:
     attributes:
       label: SincePet Version
       description: What version of SincePet are you running? (Check `/plugins` or the jar name)
-      placeholder: 1.0
+      placeholder: "1.0"
     validations:
       required: true
   - type: input
