@@ -1,26 +1,52 @@
 name: Feature Request
-description: Suggest an idea for SincePet
+description: Suggest a new feature, pet type, or enhancement for SincePet
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Please check if this feature has already been requested before opening a new one.
+        ### 💡 SincePet Feature Request
+        Have a great idea for a new pet mechanic, stat formula, or integration? Let us know below!
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What part of SincePet does this feature affect?
+      options:
+        - Pet Types & Behaviors
+        - Stat Formulas & Leveling
+        - Riding & Physics
+        - Upgrades & GUI
+        - Dependency Integrations (MythicMobs, WorldGuard, etc.)
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:
       label: Feature Description
       description: A clear and concise description of what the feature is and why it is needed.
+      placeholder: "Add the ability for pets to harvest crops automatically or give a new stat like DODGE_CHANCE."
     validations:
       required: true
   - type: textarea
     id: use-case
     attributes:
       label: Use Case
-      description: Provide an example of how this feature would be used by players or admins.
+      description: Provide an example of how this feature would be used by players on a server.
+      placeholder: "Players with high-level Monkey King pets would benefit from an active skill that..."
+  - type: textarea
+    id: example-config
+    attributes:
+      label: Example Configuration (Optional)
+      description: If you have an idea of how this feature would look in `pets.yml` or `config.yml`, please provide an example format.
+      value: |
+        ```yaml
+        # Example format
+        ```
   - type: textarea
     id: additional-context
     attributes:
       label: Additional Context
-      description: Add any other context, configuration examples, or screenshots about the feature request here.
+      description: Add any other context or screenshots about the feature request here.

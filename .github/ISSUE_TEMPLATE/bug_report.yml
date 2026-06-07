@@ -1,26 +1,45 @@
 name: Bug Report
-description: File a bug report for SincePet
+description: Report a bug or issue with SincePet plugin
 title: "[Bug]: "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Please ensure you have read the documentation and checked existing issues before creating a new one.
+        ### 🐾 SincePet Bug Report
+        Thank you for reporting an issue. Please fill out the form below with as much detail as possible to help us fix the problem faster. Ensure you check for existing issues before submitting.
   - type: input
     id: server-version
     attributes:
-      label: Server Version
-      description: What version of Paper/Spigot are you running? (Use `/version` command)
-      placeholder: Paper version git-Paper-XYZ (MC: 1.21.x)
+      label: Server Software & Version
+      description: What version of Paper/Folia are you running? (Use `/version` command)
+      placeholder: Paper version git-Paper-123 (MC: 1.21.1)
     validations:
       required: true
   - type: input
     id: plugin-version
     attributes:
-      label: Plugin Version
-      description: What version of SincePet are you running? (Use `/plugins` command or check the jar name)
-      placeholder: 1.0.x
+      label: SincePet Version
+      description: What version of SincePet are you running?
+      placeholder: 1.0
+    validations:
+      required: true
+  - type: input
+    id: dependencies
+    attributes:
+      label: Dependencies Versions
+      description: Please list the versions of the required dependencies you are using (MythicLib, MythicMobs, WorldGuard).
+      placeholder: MythicLib v1.7.1, MythicMobs v5.12.0, WorldGuard v7.0.16
+    validations:
+      required: true
+  - type: dropdown
+    id: database-type
+    attributes:
+      label: Database Type
+      description: Which database are you using for SincePet?
+      options:
+        - SQLite (Local)
+        - MySQL (Remote)
     validations:
       required: true
   - type: textarea
@@ -28,6 +47,7 @@ body:
     attributes:
       label: Bug Description
       description: A clear and concise description of what the bug is.
+      placeholder: For example, "When a player tries to ride a Phoenix pet, the server throws an error and the player gets kicked."
     validations:
       required: true
   - type: textarea
@@ -36,26 +56,25 @@ body:
       label: Steps to Reproduce
       description: Steps to reproduce the behavior.
       placeholder: |
-        1. Go to '...'
-        2. Click on '....'
-        3. Scroll down to '....'
-        4. See error
+        1. Spawn a 'PHOENIX' pet.
+        2. Attempt to right-click it to ride.
+        3. See error in console.
     validations:
       required: true
   - type: textarea
-    id: expected-behavior
+    id: configuration
     attributes:
-      label: Expected Behavior
-      description: A clear and concise description of what you expected to happen.
+      label: Relevant Configuration (pets.yml / config.yml)
+      description: If the issue is related to specific pets, formulas, or physics, please paste the relevant configuration section here. Use code blocks (```yaml).
   - type: textarea
     id: errors
     attributes:
       label: Errors / Console Log
-      description: If applicable, add a link to pastebin/mclo.gs with your server log/error message.
+      description: If applicable, add a link to pastebin.com or mclo.gs with your server log/error message. Do NOT paste long logs directly here.
     validations:
       required: false
   - type: textarea
     id: additional-context
     attributes:
       label: Additional Context
-      description: Add any other context about the problem here.
+      description: Add any other context about the problem here (e.g., issues with stats like PHYSICAL_DAMAGE, pet riding/flying bugs, upgrade point issues).
