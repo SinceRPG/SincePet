@@ -1,0 +1,61 @@
+name: Bug Report
+description: File a bug report for SincePet
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please ensure you have read the documentation and checked existing issues before creating a new one.
+  - type: input
+    id: server-version
+    attributes:
+      label: Server Version
+      description: What version of Paper/Spigot are you running? (Use `/version` command)
+      placeholder: Paper version git-Paper-XYZ (MC: 1.21.x)
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin Version
+      description: What version of SincePet are you running? (Use `/plugins` command or check the jar name)
+      placeholder: 1.0.x
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+  - type: textarea
+    id: errors
+    attributes:
+      label: Errors / Console Log
+      description: If applicable, add a link to pastebin/mclo.gs with your server log/error message.
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here.
