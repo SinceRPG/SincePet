@@ -164,7 +164,8 @@ public class PetListener implements Listener {
             if (i.isLeft()) s += 1;
             if (i.isRight()) s -= 1;
             boolean jump = i.isJump();
-            plugin.getPetManager().updateInput(p, f, s, jump);
+            boolean sneak = i.isSneak();
+            plugin.getPetManager().updateInput(p, f, s, jump, sneak);
         }
     }
 

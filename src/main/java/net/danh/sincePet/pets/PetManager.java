@@ -16,6 +16,7 @@ import io.lumine.mythic.lib.damage.DamageType;
 import io.lumine.mythic.lib.element.Element;
 import io.lumine.mythic.lib.player.modifier.ModifierSource;
 import io.lumine.mythic.lib.player.modifier.ModifierType;
+import io.papermc.paper.entity.TeleportFlag;
 import net.danh.sincePet.SincePet;
 import net.danh.sincePet.hooks.WorldGuardHook;
 import net.danh.sincePet.utils.Calculator;
@@ -25,6 +26,7 @@ import net.kyori.adventure.text.Component;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.Bukkit;
 import org.bukkit.FluidCollisionMode;
+import org.bukkit.Input;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -240,8 +242,10 @@ public class PetManager {
             p.sendMessage(getComp("pet.command.ride_not_allowed"));
             return;
         }
-        activePets.get(p.getUniqueId()).addPassenger(p);
-        p.sendMessage(getComp("pet.command.ride_success"));
+        if (activePets.get(p.getUniqueId()).addPassenger(p)) {
+            playerInputs.put(p.getUniqueId(), readCurrentInput(p));
+            p.sendMessage(getComp("pet.command.ride_success"));
+        }
     }
 
     /**
@@ -285,9 +289,20 @@ public class PetManager {
             sender.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.levelup_other").replace("<target>", target.getName()).replace("<level>", String.valueOf(newLv))));
     }
 
-    public void updateInput(Player p, float f, float s, boolean jump) {
+    public void updateInput(Player p, float f, float s, boolean jump, boolean sneak) {
         if (activePets.containsKey(p.getUniqueId()))
-            playerInputs.put(p.getUniqueId(), new float[]{f, s, jump ? 1.0f : 0.0f});
+            playerInputs.put(p.getUniqueId(), new float[]{f, s, jump ? 1.0f : 0.0f, sneak ? 1.0f : 0.0f});
+    }
+
+    private float[] readCurrentInput(Player p) {
+        Input input = p.getCurrentInput();
+        float forward = 0;
+        if (input.isForward()) forward += 1;
+        if (input.isBackward()) forward -= 1;
+        float sideways = 0;
+        if (input.isLeft()) sideways += 1;
+        if (input.isRight()) sideways -= 1;
+        return new float[]{forward, sideways, input.isJump() ? 1.0f : 0.0f, input.isSneak() ? 1.0f : 0.0f};
     }
 
     public boolean isPlayerPet(Entity entity) {
@@ -416,7 +431,8 @@ public class PetManager {
             return;
         }
 
-        var input = playerInputs.getOrDefault(uuid, new float[]{0, 0, 0});
+        var input = readCurrentInput(p);
+        playerInputs.put(uuid, input);
         boolean canFly = data.canFly() && checkFlag(p, WorldGuardHook.PET_FLY);
         var curLoc = pet.getLocation();
         curLoc.setYaw(p.getLocation().getYaw());
@@ -427,14 +443,18 @@ public class PetManager {
         if (canFly) {
             var desiredVel = new Vector(0, 0, 0);
             if (input[0] != 0 || input[1] != 0) {
-                var dir = p.getLocation().getDirection().setY(0);
+                var dir = p.getLocation().getDirection();
                 if (dir.lengthSquared() > 0) {
                     dir.normalize();
-                    var left = new Vector(0, 1, 0).crossProduct(dir).normalize();
+                    var flatDir = p.getLocation().getDirection().setY(0);
+                    if (flatDir.lengthSquared() == 0) flatDir = new Vector(0, 0, 1);
+                    else flatDir.normalize();
+                    var left = new Vector(0, 1, 0).crossProduct(flatDir).normalize();
                     desiredVel = dir.multiply(input[0]).add(left.multiply(input[1])).normalize().multiply(settings.flySpeed());
                 }
             }
             if (input[2] > 0) desiredVel.add(new Vector(0, settings.flyVerticalSpeed(), 0));
+            if (input[3] > 0) desiredVel.add(new Vector(0, -settings.flyVerticalSpeed(), 0));
 
             velocity.multiply(settings.flyFriction());
             velocity.add(desiredVel.multiply(settings.flyAcceleration()));
@@ -635,13 +655,18 @@ public class PetManager {
 
     private void teleportPet(ItemDisplay pet, Location location, boolean smooth) {
         location.setPitch(0);
-        pet.setTeleportDuration(smooth ? settings.teleportDuration() : 0);
+        boolean riding = !pet.getPassengers().isEmpty();
+        pet.setTeleportDuration(smooth && !riding ? settings.teleportDuration() : 0);
         if (isValidLocation(location)) {
-            pet.teleport(location);
+            if (riding) {
+                pet.teleport(location, TeleportFlag.EntityState.RETAIN_PASSENGERS);
+            } else {
+                pet.teleport(location);
+            }
             UUID owner = getOwnerId(pet);
             if (owner != null) {
                 TextDisplay name = activePetNames.get(owner);
-                if (name != null) teleportName(name, location, smooth, pet.getPassengers().size() > 0);
+                if (name != null) teleportName(name, location, smooth && !riding, riding);
             }
         }
     }
