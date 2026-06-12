@@ -40,6 +40,7 @@ public class PetConfig {
             double cooldown = section.getDouble(path + "attack.cooldown", 2.0);
             String dmgFormula = section.getString(path + "attack.damage_formula", "0");
             double inheritance = section.getDouble(path + "attack.inheritance", 1.0);
+            String attackParticle = section.getString(path + "attack.particle");
 
             // Ride configuration.
             boolean rideable = section.getBoolean(path + "ride.enabled", false);
@@ -48,7 +49,7 @@ public class PetConfig {
             // XP progression formula.
             String maxXpFormula = section.getString(path + "max_xp_formula", "100 * <level>");
 
-            pets.put(key, new PetData(key, name, texture, stat, formula, range, cooldown, dmgFormula, inheritance, rideable, canFly, maxXpFormula, loadUpgrades(section.getConfigurationSection(path + "upgrades"))));
+            pets.put(key, new PetData(key, name, texture, stat, formula, range, cooldown, dmgFormula, inheritance, attackParticle, rideable, canFly, maxXpFormula, loadUpgrades(section.getConfigurationSection(path + "upgrades"))));
         }
     }
 

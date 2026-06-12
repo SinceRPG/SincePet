@@ -17,6 +17,7 @@ pets:
       cooldown: 1.2
       damage_formula: "12 + (level * 3.5)"
       inheritance: 0.55
+      particle: "FLAME"
     ride:
       enabled: true
       can_fly: true
@@ -70,6 +71,7 @@ attack:
   cooldown: 1.2
   damage_formula: "12 + (level * 3.5)"
   inheritance: 0.55
+  particle: "FLAME"
 ```
 
 | Key | Description |
@@ -78,6 +80,7 @@ attack:
 | `cooldown` | Seconds between attacks. |
 | `damage_formula` | Pet base damage formula. |
 | `inheritance` | Portion of the owner's MythicLib damage inherited by the pet. `0.55` means 55%. |
+| `particle` | The Bukkit particle effect shown when the pet attacks. |
 
 ## Ride
 
@@ -88,3 +91,18 @@ ride:
 ```
 
 `enabled` controls whether the pet can be ridden. `can_fly` allows flying movement while riding, if WorldGuard also allows pet flying in the current region.
+
+## Example Pets
+
+Here is a list of the 10 default pet examples included in `pets.yml`:
+
+1. **MONKEY** (`Monkey King`): Primary physical damage dealer.
+2. **WOLF** (`Wolf Spirit`): Increases critical strike chance, rapid attacks.
+3. **PHOENIX** (`Phoenix Ember`): Magic damage dealer, rideable and can fly.
+4. **TURTLE** (`Ancient Turtle`): Tank pet, significantly increases max health.
+5. **DRAGON** (`Ender Dragon`): High magic damage and inheritance, powerful flying mount.
+6. **TIGER** (`Bengal Tiger`): Very fast attacker with physical damage bonuses.
+7. **BEAR** (`Grizzly Bear`): Hybrid tank/damage dealer.
+8. **PANDA** (`Bamboo Panda`): Support pet, provides health regeneration.
+9. **EAGLE** (`Sky Eagle`): Sniper pet with very long range and critical strike power.
+10. **UNICORN** (`Mystic Unicorn`): Fast ground mount that boosts movement speed.

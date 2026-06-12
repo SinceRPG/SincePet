@@ -906,7 +906,10 @@ public class PetManager {
             var dir = end.toVector().subtract(start.toVector()).normalize();
             double dist = start.distance(end);
 
-            var particleConfig = plugin.getConfigFile().getString("effects.attack.particle", "CRIT");
+            var particleConfig = data.attackParticle();
+            if (particleConfig == null) {
+                particleConfig = plugin.getConfigFile().getString("effects.attack.particle", "CRIT");
+            }
             spawnParticleSafe(start.getWorld(), start, particleConfig, dir, dist);
             playSoundSafe(p, start, plugin.getConfigFile().getString("effects.attack.sound", "ENTITY_PLAYER_ATTACK_SWEEP"));
 
