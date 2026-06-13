@@ -1,0 +1,46 @@
+id: PHOENIX
+name: "&cPhoenix Ember"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTc5OThmY2ViZjM0ODg5NDMzZTI2OTU4ZWRiY2NlOWUyZTVkYmM4ZTZmNzU4NTg5OTVhYzg3NzQ3Mjg5In19fQ=="
+stat: "MAGIC_DAMAGE"
+formula: "3 + (level * 0.8) + (pow(level, 2) * 0.015)"
+max_xp_formula: "150 + (level * 75)"
+attack:
+  range: 5.5
+  cooldown: 1.2
+  damage_formula: "12 + (level * 3.5) + (pow(level, 2) * 0.12)"
+  inheritance: 0.55
+  particle: "FLAME"
+ride:
+  enabled: true
+  can_fly: true
+upgrades:
+  ember:
+    name: "<red>Ember Core"
+    material: "FIRE_CHARGE"
+    slot: 10
+    max_level: 10
+    stat_bonus_formula: "1.2 * <upgrade_level>"
+    damage_bonus_formula: "4 * <upgrade_level>"
+    requirement:
+      papi: "%playerpoints_points%"
+      compare: ">="
+      value: "20"
+      display: "You need 20 points"
+    commands:
+      - "points take <player> 20"
+abilities:
+  passive:
+    rebirth:
+      enabled: true
+      mythicmobs_skill: PHOENIX_REBIRTH
+      cooldown: 300
+      triggers:
+        - OWNER_RESPAWN
+  active:
+    fireball:
+      enabled: true
+      mythicmobs_skill: PHOENIX_FIREBALL
+      cooldown: 10
+      triggers:
+        - ACTIVE
+        - RIGHT_CLICK_AIR

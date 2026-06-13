@@ -1,0 +1,47 @@
+id: PANDA
+name: "&fBamboo Panda"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDE1YTFmZGZjYWE4NWM4MzM1ZWY3YTEwNGI4NDhlOGM4YWFlMmI2ZTlmY2QwMjkzYWVkMWNjODBiOGZhNGMwMCJ9fX0="
+stat: "HEALTH_REGENERATION"
+formula: "0.5 + (level * 0.1)"
+max_xp_formula: "100 + (level * 50)"
+attack:
+  range: 2.0
+  cooldown: 2.0
+  damage_formula: "3 + (level * 1)"
+  inheritance: 0.2
+  particle: "VILLAGER_HAPPY"
+ride:
+  enabled: true
+  can_fly: false
+upgrades:
+  bamboo:
+    name: "<white>Fresh Bamboo"
+    material: "BAMBOO"
+    slot: 10
+    max_level: 5
+    stat_bonus_formula: "0.2 * <upgrade_level>"
+    damage_bonus_formula: "0.5 * <upgrade_level>"
+    requirement:
+      papi: "%playerpoints_points%"
+      compare: ">="
+      value: "10"
+      display: "You need 10 points"
+    commands:
+      - "points take <player> 10"
+abilities:
+  passive:
+    bamboo_snack:
+      enabled: true
+      mythicmobs_skill: PANDA_EAT
+      cooldown: 15
+      triggers:
+        - ITEM_CONSUME
+        - HARVEST_BLOCK
+  active:
+    roll:
+      enabled: true
+      mythicmobs_skill: PANDA_ROLL
+      cooldown: 10
+      triggers:
+        - ACTIVE
+        - SNEAK

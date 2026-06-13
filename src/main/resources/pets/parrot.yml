@@ -1,0 +1,37 @@
+id: PARROT
+name: "&cPirate Parrot"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTUwOGU2OGFkNjM0NTliOTNmNTkxODlhMzc1NjA3MzIzZmFiOWMzMTE2MmY3NzY3MTlhNmVlZmJiMmZiZDg3ZCJ9fX0="
+stat: "MAGIC_DAMAGE"
+formula: "5 + (level * 2)"
+max_xp_formula: "100 + (level * 50)"
+attack:
+  range: 10.0
+  cooldown: 1.5
+  damage_formula: "10 + (level * 2)"
+  inheritance: 0.6
+  particle: "NOTE"
+ride:
+  enabled: false
+  can_fly: false
+abilities:
+  passive:
+    mimic:
+      enabled: true
+      mythicmobs_skill: "PARROT_MIMIC"
+      cooldown: 5
+      triggers:
+        - "CHAT"
+    takeoff:
+      enabled: true
+      mythicmobs_skill: "PARROT_FLY"
+      cooldown: 20
+      triggers:
+        - "FLIGHT_START"
+  active:
+    screech:
+      enabled: true
+      mythicmobs_skill: "PARROT_SCREECH"
+      cooldown: 15
+      triggers:
+        - "ACTIVE"
+        - "SWAP_HAND"

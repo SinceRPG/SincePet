@@ -80,6 +80,7 @@ detail:
         conditions:
           - "active_pet"
           - "rideable"
+          - "permission:pets.ride"
 ```
 
 Default detail buttons:
@@ -88,7 +89,7 @@ Default detail buttons:
 | --- | --- |
 | `detail.buttons.back` | Back to collection. |
 | `detail.buttons.back_detail` | Back to detail menu. |
-| `detail.buttons.ride` | Ride active pet. |
+| `detail.buttons.ride` | Ride active pet when the player has `pets.ride`. |
 | `detail.buttons.settings` | Open pet settings. |
 | `detail.buttons.upgrades` | Open pet upgrades. |
 

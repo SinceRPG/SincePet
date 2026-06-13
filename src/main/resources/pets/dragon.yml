@@ -1,0 +1,46 @@
+id: DRAGON
+name: "&5Ender Dragon"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzczMzQ3ZGI0NGIxZTFlZDdjMjkzMzQ4MGEyNzcyMGFlMDc5YzlmYzRkMTJjZTFmZWU3MzRkMjA3YzA5OGZmYSJ9fX0="
+stat: "MAGIC_DAMAGE"
+formula: "5 + (level * 1.5)"
+max_xp_formula: "200 + (level * 100)"
+attack:
+  range: 6.0
+  cooldown: 2.0
+  damage_formula: "15 + (level * 5)"
+  inheritance: 0.8
+  particle: "DRAGON_BREATH"
+ride:
+  enabled: true
+  can_fly: true
+upgrades:
+  wings:
+    name: "<dark_purple>Dragon Wings"
+    material: "ELYTRA"
+    slot: 10
+    max_level: 5
+    stat_bonus_formula: "2 * <upgrade_level>"
+    damage_bonus_formula: "4 * <upgrade_level>"
+    requirement:
+      papi: "%playerpoints_points%"
+      compare: ">="
+      value: "30"
+      display: "You need 30 points"
+    commands:
+      - "points take <player> 30"
+abilities:
+  passive:
+    dragon_scales:
+      enabled: true
+      mythicmobs_skill: DRAGON_SCALES
+      cooldown: 30
+      triggers:
+        - OWNER_DAMAGED_BY_ENTITY
+  active:
+    breath:
+      enabled: true
+      mythicmobs_skill: DRAGON_BREATH
+      cooldown: 25
+      triggers:
+        - ACTIVE
+        - FLIGHT_START

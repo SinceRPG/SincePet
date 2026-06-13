@@ -1,0 +1,46 @@
+id: EAGLE
+name: "&bSky Eagle"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjkxYzMyZWI0MWM4OTgzNDZmMWQ2NmFiNjkyMmExZmNmZjgzODJmZWNhOGE5MDljMWZiNDgyMTg3NGZmNWQzMSJ9fX0="
+stat: "CRITICAL_STRIKE_POWER"
+formula: "5 + (level * 1)"
+max_xp_formula: "160 + (level * 80)"
+attack:
+  range: 8.0
+  cooldown: 2.5
+  damage_formula: "20 + (level * 4)"
+  inheritance: 0.7
+  particle: "FIREWORKS_SPARK"
+ride:
+  enabled: true
+  can_fly: true
+upgrades:
+  vision:
+    name: "<aqua>Eagle Vision"
+    material: "SPYGLASS"
+    slot: 10
+    max_level: 10
+    stat_bonus_formula: "1.5 * <upgrade_level>"
+    damage_bonus_formula: "2 * <upgrade_level>"
+    requirement:
+      papi: "%playerpoints_points%"
+      compare: ">="
+      value: "20"
+      display: "You need 20 points"
+    commands:
+      - "points take <player> 20"
+abilities:
+  passive:
+    eagle_eye:
+      enabled: true
+      mythicmobs_skill: EAGLE_EYE
+      cooldown: 20
+      triggers:
+        - PROJECTILE_LAUNCH
+  active:
+    dive:
+      enabled: true
+      mythicmobs_skill: EAGLE_DIVE
+      cooldown: 18
+      triggers:
+        - ACTIVE
+        - GLIDE_START

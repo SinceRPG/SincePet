@@ -35,5 +35,6 @@ The most important files to merge after this version are:
 - `gui.yml`
 - `messages.yml`
 - `pets.yml`
+- `pets/`
 
 If you are testing on a fresh server, you can delete the old generated YAML files and let the plugin regenerate them.

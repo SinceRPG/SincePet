@@ -1,0 +1,32 @@
+id: SLOTH
+name: "&aSleepy Sloth"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvM2Y1MzFkNTU1MTlkOTFhN2ZlZDkxYTA5NjZmMGFlMWQ1MDc4YzJiOGQ4ZTIxZDc5YTZkOTQxMjFmYWNmMDE4OSJ9fX0="
+stat: "HEALTH"
+formula: "10 + (level * 2)"
+max_xp_formula: "100 + (level * 50)"
+attack:
+  range: 2.0
+  cooldown: 2.0
+  damage_formula: "2 + (level * 0.5)"
+  inheritance: 0.2
+  particle: "HEART"
+ride:
+  enabled: false
+  can_fly: false
+abilities:
+  passive:
+    sleepy_heal:
+      enabled: true
+      mythicmobs_skill: "SLOTH_HEAL"
+      cooldown: 60
+      triggers:
+        - "BED_ENTER"
+        - "SNEAK"
+  active:
+    yawn:
+      enabled: true
+      mythicmobs_skill: "SLOTH_YAWN"
+      cooldown: 20
+      triggers:
+        - "ACTIVE"
+        - "DOUBLE_SNEAK"

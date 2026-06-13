@@ -1,0 +1,47 @@
+id: UNICORN
+name: "&dMystic Unicorn"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTU1YmRlMjFlOWVjYWE5ZjllMzg2ZTlmNThmMDQwYTM4MGUwNjc3ZWVkNjM4MzNiODBhMzk4NWYzNDM3ZTc3ZiJ9fX0="
+stat: "MOVEMENT_SPEED"
+formula: "0.01 + (level * 0.002)"
+max_xp_formula: "180 + (level * 90)"
+attack:
+  range: 4.0
+  cooldown: 1.0
+  damage_formula: "8 + (level * 2)"
+  inheritance: 0.5
+  particle: "SPELL_WITCH"
+ride:
+  enabled: true
+  can_fly: false
+upgrades:
+  horn:
+    name: "<light_purple>Magic Horn"
+    material: "END_ROD"
+    slot: 10
+    max_level: 5
+    stat_bonus_formula: "0.005 * <upgrade_level>"
+    damage_bonus_formula: "1.5 * <upgrade_level>"
+    requirement:
+      papi: "%playerpoints_points%"
+      compare: ">="
+      value: "25"
+      display: "You need 25 points"
+    commands:
+      - "points take <player> 25"
+abilities:
+  passive:
+    magic_aura:
+      enabled: true
+      mythicmobs_skill: UNICORN_AURA
+      cooldown: 25
+      triggers:
+        - GAMEMODE_CHANGE
+        - WORLD_CHANGE
+  active:
+    horn_pierce:
+      enabled: true
+      mythicmobs_skill: UNICORN_PIERCE
+      cooldown: 15
+      triggers:
+        - ACTIVE
+        - RIPTIDE

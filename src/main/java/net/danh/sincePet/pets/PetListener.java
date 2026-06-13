@@ -127,9 +127,8 @@ public class PetListener implements Listener {
             var allPets = new ArrayList<>(plugin.getPetManager().getPetConfig().getAllPets());
             var viewablePets = new ArrayList<PetData>();
 
-            boolean hasAllPerm = p.hasPermission("pet.hasall");
             for (PetData pet : allPets) {
-                if (hasAllPerm || p.hasPermission("pet." + pet.id().toLowerCase())) {
+                if (plugin.getPetManager().canAccessPet(p, pet)) {
                     viewablePets.add(pet);
                 }
             }

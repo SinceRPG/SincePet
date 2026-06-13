@@ -1,0 +1,46 @@
+id: BEAR
+name: "&8Grizzly Bear"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDk0MDViYWNhZWE2YzFkOTViNTI0YzEyZjE2NGE3NThhNGE4ZGI3ZmUzNTgyZTgyYTk2OTRmYmM4Mzk5MTY5YSJ9fX0="
+stat: "MAX_HEALTH"
+formula: "10 + (level * 2)"
+max_xp_formula: "140 + (level * 70)"
+attack:
+  range: 3.0
+  cooldown: 1.5
+  damage_formula: "12 + (level * 2.5)"
+  inheritance: 0.5
+  particle: "CAMPFIRE_COSY_SMOKE"
+ride:
+  enabled: true
+  can_fly: false
+upgrades:
+  hide:
+    name: "<dark_gray>Thick Hide"
+    material: "LEATHER_CHESTPLATE"
+    slot: 10
+    max_level: 10
+    stat_bonus_formula: "3 * <upgrade_level>"
+    damage_bonus_formula: "1 * <upgrade_level>"
+    requirement:
+      papi: "%playerpoints_points%"
+      compare: ">="
+      value: "15"
+      display: "You need 15 points"
+    commands:
+      - "points take <player> 15"
+abilities:
+  passive:
+    hibernation:
+      enabled: true
+      mythicmobs_skill: BEAR_HIBERNATION
+      cooldown: 60
+      triggers:
+        - BED_ENTER
+  active:
+    maul:
+      enabled: true
+      mythicmobs_skill: BEAR_MAUL
+      cooldown: 12
+      triggers:
+        - ACTIVE
+        - PHYSICAL_INTERACT

@@ -1,6 +1,6 @@
 # Upgrade System
 
-Each pet can define upgrade nodes in `pets.yml`.
+Each pet can define upgrade nodes in its `pets/*.yml` file.
 
 ## Example
 

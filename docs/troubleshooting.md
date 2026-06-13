@@ -27,7 +27,7 @@ More negative values move the visual lower under the rider.
 
 ## Upgrade GUI shows `%playerpoints_points% >= 20`
 
-Add a friendly display line in `pets.yml`:
+Add a friendly display line in that pet's `pets/*.yml` file:
 
 ```yaml
 requirement:

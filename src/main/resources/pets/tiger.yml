@@ -1,0 +1,46 @@
+id: TIGER
+name: "&6Bengal Tiger"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjMyY2JhYzM1ODQyYTdlYzlkM2E4MzMwMDllYTFhNzdmOWU0NTVhMzA3ZWY2NzY0Njk3MGM1NzQ0NjlkNTY4MCJ9fX0="
+stat: "PHYSICAL_DAMAGE"
+formula: "3 + (level * 1.2)"
+max_xp_formula: "120 + (level * 60)"
+attack:
+  range: 3.5
+  cooldown: 0.4
+  damage_formula: "4 + (level * 1.5)"
+  inheritance: 0.4
+  particle: "SWEEP_ATTACK"
+ride:
+  enabled: true
+  can_fly: false
+upgrades:
+  claws:
+    name: "<gold>Sharp Claws"
+    material: "IRON_SWORD"
+    slot: 10
+    max_level: 10
+    stat_bonus_formula: "1 * <upgrade_level>"
+    damage_bonus_formula: "1.5 * <upgrade_level>"
+    requirement:
+      papi: "%playerpoints_points%"
+      compare: ">="
+      value: "10"
+      display: "You need 10 points"
+    commands:
+      - "points take <player> 10"
+abilities:
+  passive:
+    tiger_pounce:
+      enabled: true
+      mythicmobs_skill: TIGER_POUNCE
+      cooldown: 8
+      triggers:
+        - SPRINT_START
+  active:
+    roar:
+      enabled: true
+      mythicmobs_skill: TIGER_ROAR
+      cooldown: 20
+      triggers:
+        - ACTIVE
+        - DOUBLE_SNEAK

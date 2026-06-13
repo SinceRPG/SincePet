@@ -6,6 +6,10 @@
 # Set to 0 to disable (Not recommended).
 auto-save: 300
 
+# Enable verbose debug logging in console for skills, triggers, and loading
+debug: false
+
+
 # Database Configuration (For saving Pet Data, Levels, XP, etc.)
 database:
   # Type: "SQLITE" or "MYSQL"

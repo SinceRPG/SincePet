@@ -1,0 +1,47 @@
+id: WOLF
+name: "&fWolf Spirit"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWRjMzQxYWQxOWU5YjI4ODQ3MmE2NjM5ZDYyZDIxYTAzM2E0YjgxYzU1ZTA2YmZlZGJkM2MyMjY4MmM0MCJ9fX0="
+stat: "CRITICAL_STRIKE_CHANCE"
+formula: "2 + (level * 0.4) + (pow(level, 2) * 0.001)"
+max_xp_formula: "120 + (level * 60)"
+attack:
+  range: 3.0
+  cooldown: 0.6
+  damage_formula: "5 + (level * 4) + (pow(level, 2) * 0.15)"
+  inheritance: 0.7
+  particle: "CRIT_MAGIC"
+abilities:
+  passive:
+    counter_howl:
+      enabled: false
+      mythicmobs_skill: "ARCANE_HAIL"
+      cooldown: 8
+      triggers:
+        - "OWNER_DAMAGED"
+  active:
+    rift_bite:
+      enabled: false
+      mythicmobs_skill: "ARCANE_RIFT"
+      cooldown: 12
+      triggers:
+        - "ACTIVE"
+        - "SWAP_HAND"
+        - "DOUBLE_SNEAK"
+ride:
+  enabled: true
+  can_fly: false
+upgrades:
+  fang:
+    name: "<white>Sharpened Fang"
+    material: "BONE"
+    slot: 10
+    max_level: 10
+    stat_bonus_formula: "0.35 * <upgrade_level>"
+    damage_bonus_formula: "2.5 * <upgrade_level>"
+    requirement:
+      papi: "%playerpoints_points%"
+      compare: ">="
+      value: "10"
+      display: "You need 10 points"
+    commands:
+      - "points take <player> 10"

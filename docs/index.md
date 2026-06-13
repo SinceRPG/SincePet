@@ -31,7 +31,7 @@ This wiki is written for server owners who want to configure the plugin without 
 | File | Purpose |
 | --- | --- |
 | `config.yml` | Core plugin settings, database, display offsets, riding physics, follow behavior, combat throttle. |
-| `pets.yml` | Pet definitions, textures, stats, attack behavior, riding support, upgrade definitions. |
+| `pets.yml` + `pets/*.yml` | Pet order plus individual pet definitions, textures, stats, attack behavior, riding support, upgrade definitions, and abilities. |
 | `gui.yml` | Every GUI item, GUI item meta, upgrade display templates, and display conditions. |
 | `messages.yml` | Player-facing messages, menu titles, and status labels. |
 | `paper-plugin.yml` | Plugin metadata and dependency declarations. |

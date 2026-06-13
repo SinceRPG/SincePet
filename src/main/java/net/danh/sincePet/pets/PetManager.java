@@ -65,6 +65,7 @@ public class PetManager {
 
     private final SincePet plugin;
     private final PetConfig petConfig;
+    private final PetAbilityManager abilityManager;
     private final Map<UUID, ItemDisplay> activePets = new ConcurrentHashMap<>();
     private final Map<UUID, TextDisplay> activePetNames = new ConcurrentHashMap<>();
     private final Map<UUID, PetData> activePetData = new ConcurrentHashMap<>();
@@ -91,6 +92,16 @@ public class PetManager {
         this.settings = PetSettings.load(plugin);
         this.hasMythicLib = Bukkit.getPluginManager().isPluginEnabled("MythicLib");
         this.hasWorldGuard = plugin.getWorldGuardHook() != null;
+        this.abilityManager = new PetAbilityManager(plugin, this);
+    }
+
+    public PetAbilityManager getAbilityManager() {
+        return abilityManager;
+    }
+
+    public boolean canAccessPet(Player p, PetData data) {
+        if (data == null) return false;
+        return p.hasPermission("sincepet.pet." + data.id().toLowerCase());
     }
 
     public PetConfig getPetConfig() {
@@ -315,6 +326,11 @@ public class PetManager {
 
     public PetData getActivePetData(Player p) {
         return activePetData.get(p.getUniqueId());
+    }
+
+    public ItemDisplay getActivePetEntity(Player p) {
+        if (p == null) return null;
+        return activePets.get(p.getUniqueId());
     }
 
     public boolean getPetSetting(Player p, String petId, String settingId, boolean fallback) {

@@ -134,9 +134,8 @@ public class PetGUI implements InventoryHolder {
 
     private List<PetData> getViewablePets(Player p) {
         List<PetData> viewablePets = new ArrayList<>();
-        boolean hasAllPerm = p.hasPermission("pet.hasall");
         for (PetData pet : plugin.getPetManager().getPetConfig().getAllPets()) {
-            if (hasAllPerm || p.hasPermission("pet." + pet.id().toLowerCase())) {
+            if (plugin.getPetManager().canAccessPet(p, pet)) {
                 viewablePets.add(pet);
             }
         }
@@ -187,6 +186,9 @@ public class PetGUI implements InventoryHolder {
                     .replace("<value>", buffDisplay)
                     .replace("<formula>", data.formula())
                     .replace("<inheritance>", inheritanceStr)
+                    .replace("<skills>", getSkillSummary(data, "all"))
+                    .replace("<active_skills>", getSkillSummary(data, "active"))
+                    .replace("<passive_skills>", getSkillSummary(data, "passive"))
                     .replace("<status>", statusLine)));
         }
         meta.lore(lore);
@@ -422,6 +424,16 @@ public class PetGUI implements InventoryHolder {
 
     private String formatNumber(double value) {
         return value % 1 == 0 ? String.valueOf((int) value) : String.format("%.2f", value);
+    }
+
+    private String getSkillSummary(PetData data, String type) {
+        List<String> skills = data.skills().stream()
+                .filter(PetSkill::enabled)
+                .filter(skill -> "all".equals(type) || skill.type().equalsIgnoreCase(type))
+                .map(skill -> skill.id() + " (" + String.join("/", skill.triggers()) + ")")
+                .toList();
+        if (skills.isEmpty()) return "-";
+        return String.join(", ", skills);
     }
 
     private String getRequirementDisplay(Player p, PetUpgrade upgrade) {

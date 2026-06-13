@@ -1,0 +1,30 @@
+id: FOX
+name: "&6Swift Fox"
+texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjk5NTVkYzkxZTM3MWRiZjdmOTU1NWRhOGNlNzM5ZmVkMjIyYzc1NWI2NDg4NDY0Y2NmZWJmMzEwYmM2MzllYiJ9fX0="
+stat: "CRITICAL_STRIKE_POWER"
+formula: "10 + (level * 1)"
+max_xp_formula: "100 + (level * 50)"
+attack:
+  range: 3.0
+  cooldown: 0.5
+  damage_formula: "8 + (level * 1.5)"
+  inheritance: 0.5
+  particle: "CRIT_MAGIC"
+ride:
+  enabled: false
+  can_fly: false
+abilities:
+  passive:
+    berry_eat:
+      enabled: true
+      mythicmobs_skill: "FOX_HEAL"
+      cooldown: 15
+      triggers:
+        - "ITEM_CONSUME"
+        - "HARVEST_BLOCK"
+    dash:
+      enabled: true
+      mythicmobs_skill: "FOX_DASH"
+      cooldown: 5
+      triggers:
+        - "SPRINT_START"

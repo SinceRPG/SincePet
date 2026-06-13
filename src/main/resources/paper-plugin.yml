@@ -23,3 +23,17 @@ permissions:
   sincepet.admin:
     description: SincePet Admin permission
     default: op
+  pet.hasall:
+    description: Allows access to every configured pet
+    default: op
+  pet.*:
+    description: Allows access to every pet permission node
+    default: op
+    children:
+      pet.hasall: true
+  pets.ride:
+    description: Allows riding pets through commands, GUI actions, and right-clicking
+    default: op
+  pets.skill:
+    description: Allows using active pet abilities through /pet skill
+    default: op

@@ -58,6 +58,7 @@ detail:
         conditions:
           - "active_pet"
           - "rideable"
+          - "permission:pets.ride"
     settings:
       slot: 13
       material: "COMPARATOR"
