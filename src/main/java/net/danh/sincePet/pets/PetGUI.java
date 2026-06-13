@@ -84,7 +84,7 @@ public class PetGUI implements InventoryHolder {
 
         List<PetData> viewablePets = getViewablePets(p);
         setBorder(p, gui);
-        setPetIcons(p, messages, viewablePets);
+        setPetIcons(p, gui, messages, viewablePets);
         setNavigationButtons(p, gui, viewablePets.size());
 
         p.openInventory(inv);
@@ -147,7 +147,7 @@ public class PetGUI implements InventoryHolder {
         for (int i = 45; i < INVENTORY_SIZE; i++) inv.setItem(i, borderItem);
     }
 
-    private void setPetIcons(Player p, ConfigUtils messages, List<PetData> viewablePets) {
+    private void setPetIcons(Player p, ConfigUtils gui, ConfigUtils messages, List<PetData> viewablePets) {
         int totalPets = viewablePets.size();
         int startIndex = (page - 1) * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalPets);
@@ -156,16 +156,11 @@ public class PetGUI implements InventoryHolder {
         for (int i = startIndex; i < endIndex; i++) {
             PetData data = viewablePets.get(i);
             int level = plugin.getPetManager().getPetLevel(p, data.id());
-            inv.setItem(slot++, createPetIcon(messages, data, level));
+            inv.setItem(slot++, createPetIcon(gui, messages, data, level));
         }
     }
 
-    private ItemStack createPetIcon(ConfigUtils messages, PetData data, int level) {
-        ItemStack icon = createIconBase(data);
-        ItemMeta meta = icon.getItemMeta();
-        String nameFmt = messages.getString("pet.gui.item_name", "<name>");
-        meta.displayName(ColorUtils.parse(nameFmt.replace("<name>", data.name())));
-
+    private ItemStack createPetIcon(ConfigUtils gui, ConfigUtils messages, PetData data, int level) {
         double buffValue = 0;
         try {
             String formula = data.formula().replace("<level>", String.valueOf(level));
@@ -175,39 +170,30 @@ public class PetGUI implements InventoryHolder {
 
         String buffDisplay = (buffValue % 1 == 0) ? String.valueOf((int) buffValue) : String.format("%.2f", buffValue);
         String inheritanceStr = String.valueOf((int) (data.inheritance() * 100));
-        String statusLine = messages.getString("pet.gui.status_unlocked", "Unlocked");
-
-        List<Component> lore = new ArrayList<>();
-        for (String line : messages.getStringList("pet.gui.item_lore")) {
-            lore.add(ColorUtils.parse(line
-                    .replace("<id>", data.id())
-                    .replace("<level>", String.valueOf(level))
-                    .replace("<stat>", data.stat())
-                    .replace("<value>", buffDisplay)
-                    .replace("<formula>", data.formula())
-                    .replace("<inheritance>", inheritanceStr)
-                    .replace("<skills>", getSkillSummary(data, "all"))
-                    .replace("<active_skills>", getSkillSummary(data, "active"))
-                    .replace("<passive_skills>", getSkillSummary(data, "passive"))
-                    .replace("<status>", statusLine)));
-        }
-        meta.lore(lore);
-        icon.setItemMeta(meta);
-        return icon;
-    }
-
-    private ItemStack createIconBase(PetData data) {
-        if (data.texture() == null || data.texture().isEmpty()) {
-            return new ItemStack(Material.PAPER);
-        }
-
-        ItemStack icon = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta skullMeta = (SkullMeta) icon.getItemMeta();
-        PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
-        profile.setProperty(new ProfileProperty("textures", data.texture()));
-        skullMeta.setPlayerProfile(profile);
-        icon.setItemMeta(skullMeta);
-        return icon;
+        String statusLine = getConfigString(gui, messages, "collection.pet_item.status.unlocked", "pet.gui.status_unlocked", "<green>Unlocked");
+        String itemPath = gui.getConfig().isConfigurationSection("collection.items." + data.id()) ? "collection.items." + data.id() : "collection.pet_item";
+        Material fallbackMaterial = data.texture() == null || data.texture().isBlank() ? Material.PAPER : Material.PLAYER_HEAD;
+        List<String> fallbackLore = messages.getStringList("pet.gui.item_lore");
+        Placeholder[] placeholders = new Placeholder[]{
+                new Placeholder("<pet>", data.name()),
+                new Placeholder("<name>", data.name()),
+                new Placeholder("<pet_display>", getDisplayValue(gui, "pets", data.id())),
+                new Placeholder("<pet_id_display>", getDisplayValue(gui, "pets", data.id())),
+                new Placeholder("<id>", data.id()),
+                new Placeholder("<pet_id>", data.id()),
+                new Placeholder("<level>", String.valueOf(level)),
+                new Placeholder("<stat>", getDisplayValue(gui, "stats", data.stat())),
+                new Placeholder("<value>", buffDisplay),
+                new Placeholder("<stat_bonus>", buffDisplay),
+                new Placeholder("<formula>", data.formula()),
+                new Placeholder("<inheritance>", inheritanceStr),
+                new Placeholder("<skills>", getSkillSummary(gui, data, "all")),
+                new Placeholder("<active_skills>", getSkillSummary(gui, data, "active")),
+                new Placeholder("<passive_skills>", getSkillSummary(gui, data, "passive")),
+                new Placeholder("<status>", statusLine),
+                new Placeholder("<texture>", data.texture() == null ? "" : data.texture())
+        };
+        return createConfiguredItem(gui, itemPath, fallbackMaterial, messages.getString("pet.gui.item_name", "<name>"), fallbackLore, data.texture(), placeholders);
     }
 
     private void setNavigationButtons(Player p, ConfigUtils gui, int totalPets) {
@@ -290,11 +276,21 @@ public class PetGUI implements InventoryHolder {
     }
 
     private ItemStack createConfiguredItem(Player p, ConfigUtils config, String path, Material fallbackMaterial, String fallbackName, List<String> fallbackLore, Placeholder... placeholders) {
+        return createConfiguredItem(config, path, fallbackMaterial, fallbackName, fallbackLore, "", placeholders);
+    }
+
+    private ItemStack createConfiguredItem(ConfigUtils config, String path, Material fallbackMaterial, String fallbackName, List<String> fallbackLore, String fallbackSkullTexture, Placeholder... placeholders) {
         Material material = parseMaterial(config.getString(path + ".material", fallbackMaterial.name()), fallbackMaterial);
         int amount = Math.max(1, Math.min(99, config.getInt(path + ".amount", 1)));
         ItemStack item = new ItemStack(material, amount);
 
-        String texture = config.getString(path + ".skull_texture", "");
+        String texture = replacePlaceholders(config.getString(path + ".skull_texture", ""), placeholders);
+        boolean useFallbackTexture = config.getConfig().contains(path + ".use_pet_texture")
+                ? config.getConfig().getBoolean(path + ".use_pet_texture")
+                : fallbackSkullTexture != null && !fallbackSkullTexture.isBlank();
+        if (texture.isBlank() && useFallbackTexture) {
+            texture = fallbackSkullTexture == null ? "" : fallbackSkullTexture;
+        }
         if (material == Material.PLAYER_HEAD && !texture.isBlank()) {
             item = createSkull(texture);
             item.setAmount(amount);
@@ -339,8 +335,8 @@ public class PetGUI implements InventoryHolder {
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
 
-        String pdcKey = config.getString(path + ".data.key", "");
-        String pdcValue = config.getString(path + ".data.value", "");
+        String pdcKey = replacePlaceholders(config.getString(path + ".data.key", ""), placeholders);
+        String pdcValue = replacePlaceholders(config.getString(path + ".data.value", ""), placeholders);
         if (!pdcKey.isBlank()) {
             NamespacedKey key = NamespacedKey.fromString(pdcKey.contains(":") ? pdcKey : "sincepet:" + pdcKey);
             if (key != null) meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, pdcValue);
@@ -426,14 +422,43 @@ public class PetGUI implements InventoryHolder {
         return value % 1 == 0 ? String.valueOf((int) value) : String.format("%.2f", value);
     }
 
-    private String getSkillSummary(PetData data, String type) {
+    private String getSkillSummary(ConfigUtils gui, PetData data, String type) {
+        String format = gui.getString("collection.pet_item.skills.format", "<skill> (<triggers>)");
+        String separator = gui.getString("collection.pet_item.skills.separator", ", ");
+        String triggerSeparator = gui.getString("collection.pet_item.skills.trigger_separator", "/");
+        String empty = gui.getString("collection.pet_item.skills.empty", "-");
         List<String> skills = data.skills().stream()
                 .filter(PetSkill::enabled)
                 .filter(skill -> "all".equals(type) || skill.type().equalsIgnoreCase(type))
-                .map(skill -> skill.id() + " (" + String.join("/", skill.triggers()) + ")")
+                .map(skill -> format
+                        .replace("<id>", skill.id())
+                        .replace("<skill>", getDisplayValue(gui, "skills", skill.id()))
+                        .replace("<type>", getDisplayValue(gui, "skill_types", skill.type()))
+                        .replace("<mythic_skill>", getDisplayValue(gui, "mythic_skills", skill.skillId()))
+                        .replace("<cooldown>", formatNumber(skill.cooldown()))
+                        .replace("<triggers>", skill.triggers().stream()
+                                .map(trigger -> getDisplayValue(gui, "triggers", trigger))
+                                .collect(java.util.stream.Collectors.joining(triggerSeparator))))
                 .toList();
-        if (skills.isEmpty()) return "-";
-        return String.join(", ", skills);
+        if (skills.isEmpty()) return empty;
+        return String.join(separator, skills);
+    }
+
+    private String getDisplayValue(ConfigUtils gui, String group, String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) return "";
+        String basePath = "collection.pet_item.display_values." + group + ".";
+        String value = gui.getString(basePath + rawValue, "");
+        if (!value.isBlank()) return value;
+        value = gui.getString(basePath + rawValue.toUpperCase(Locale.ROOT), "");
+        if (!value.isBlank()) return value;
+        value = gui.getString(basePath + rawValue.toLowerCase(Locale.ROOT), "");
+        return value.isBlank() ? rawValue : value;
+    }
+
+    private String getConfigString(ConfigUtils primary, ConfigUtils fallbackConfig, String primaryPath, String fallbackPath, String fallbackValue) {
+        String value = primary.getString(primaryPath, "");
+        if (!value.isBlank()) return value;
+        return fallbackConfig.getString(fallbackPath, fallbackValue);
     }
 
     private String getRequirementDisplay(Player p, PetUpgrade upgrade) {

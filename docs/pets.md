@@ -205,6 +205,8 @@ For upgrade compatibility, existing `skills.active-skills`, `skills.passive-skil
 
 Pet collection lore can show configured abilities with `<skills>`, `<active_skills>`, and `<passive_skills>` in `messages.yml`.
 
+For drag-and-drop installs, the default `gui.yml` already contains friendly display mappings for every bundled pet, stat, ability, MythicMobs skill, and trigger. Keep IDs like `SLOTH`, `HEALTH`, and `DOUBLE_SNEAK` stable in pet files, then customize the player-facing wording under `collection.pet_item.display_values` in [GUI Configuration](gui.md#collection-display-values).
+
 ## Example Pets
 
 Here is a list of the 14 default pet examples included in `pets.yml`:
