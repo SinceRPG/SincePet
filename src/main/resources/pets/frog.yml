@@ -18,12 +18,20 @@ abilities:
     jump_boost:
       enabled: true
       mythicmobs_skill: "FROG_JUMP"
+      name: "<green>Amphibian Leap"
+      lore:
+        - "<gray>Powerful leg muscles."
+        - "<green>Grants Jump Boost."
       cooldown: 10
       triggers:
         - "JUMP"
     swim_boost:
       enabled: true
       mythicmobs_skill: "FROG_SWIM"
+      name: "<aqua>Aquatic Grace"
+      lore:
+        - "<gray>Master of the waters."
+        - "<aqua>Grants Dolphin's Grace in water."
       cooldown: 15
       triggers:
         - "SWIM_START"

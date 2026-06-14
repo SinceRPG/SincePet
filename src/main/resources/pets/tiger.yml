@@ -32,14 +32,22 @@ abilities:
   passive:
     tiger_pounce:
       enabled: true
-      mythicmobs_skill: TIGER_POUNCE
+      mythicmobs_skill: "TIGER_POUNCE"
+      name: "<gold>Fierce Pounce"
+      lore:
+        - "<gray>Ambush your prey."
+        - "<gold>Leap and strike for bonus damage."
       cooldown: 8
       triggers:
         - SPRINT_START
   active:
     roar:
       enabled: true
-      mythicmobs_skill: TIGER_ROAR
+      mythicmobs_skill: "TIGER_ROAR"
+      name: "<red>Intimidating Roar"
+      lore:
+        - "<gray>A fearsome bellow."
+        - "<red>Knocks back enemies in a radius."
       cooldown: 20
       triggers:
         - ACTIVE

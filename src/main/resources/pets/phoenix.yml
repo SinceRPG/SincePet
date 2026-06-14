@@ -32,14 +32,22 @@ abilities:
   passive:
     rebirth:
       enabled: true
-      mythicmobs_skill: PHOENIX_REBIRTH
+      mythicmobs_skill: "PHOENIX_REBIRTH"
+      name: "<gold>Fiery Rebirth"
+      lore:
+        - "<gray>Rise from the ashes."
+        - "<gold>Prevents a lethal blow once."
       cooldown: 300
       triggers:
         - OWNER_RESPAWN
   active:
     fireball:
       enabled: true
-      mythicmobs_skill: PHOENIX_FIREBALL
+      mythicmobs_skill: "PHOENIX_FIREBALL"
+      name: "<red>Scorching Sphere"
+      lore:
+        - "<gray>Spits a ball of pure flame."
+        - "<red>Ignites the target."
       cooldown: 10
       triggers:
         - ACTIVE

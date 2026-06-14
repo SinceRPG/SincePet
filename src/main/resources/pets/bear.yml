@@ -32,14 +32,22 @@ abilities:
   passive:
     hibernation:
       enabled: true
-      mythicmobs_skill: BEAR_HIBERNATION
+      mythicmobs_skill: "BEAR_HIBERNATION"
+      name: "<aqua>Grizzly Hibernation"
+      lore:
+        - "<gray>Restores health when you sleep."
+        - "<green>Grants Regeneration."
       cooldown: 60
       triggers:
         - BED_ENTER
   active:
     maul:
       enabled: true
-      mythicmobs_skill: BEAR_MAUL
+      mythicmobs_skill: "BEAR_MAUL"
+      name: "<red>Savage Maul"
+      lore:
+        - "<gray>A powerful melee attack."
+        - "<red>Deals massive physical damage."
       cooldown: 12
       triggers:
         - ACTIVE

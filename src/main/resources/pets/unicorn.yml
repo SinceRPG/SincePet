@@ -32,7 +32,11 @@ abilities:
   passive:
     magic_aura:
       enabled: true
-      mythicmobs_skill: UNICORN_AURA
+      mythicmobs_skill: "UNICORN_AURA"
+      name: "<light_purple>Mystic Aura"
+      lore:
+        - "<gray>A magical presence."
+        - "<light_purple>Cleanses negative potion effects."
       cooldown: 25
       triggers:
         - GAMEMODE_CHANGE
@@ -40,7 +44,11 @@ abilities:
   active:
     horn_pierce:
       enabled: true
-      mythicmobs_skill: UNICORN_PIERCE
+      mythicmobs_skill: "UNICORN_PIERCE"
+      name: "<white>Horn Pierce"
+      lore:
+        - "<gray>Charge with your horn."
+        - "<white>Ignores enemy armor."
       cooldown: 15
       triggers:
         - ACTIVE

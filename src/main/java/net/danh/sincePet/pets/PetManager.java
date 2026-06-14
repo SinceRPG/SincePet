@@ -122,7 +122,7 @@ public class PetManager {
             var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
             if (s != null && s.getActivePetId() != null) {
                 var data = petConfig.getPet(s.getActivePetId());
-                if (data != null && p.hasPermission("pet." + data.id().toLowerCase())) {
+                if (data != null && canAccessPet(p, data)) {
                     spawnPet(p, data, s.getLevel(data.id()), false);
                 } else {
                     s.setActivePetId(null);
@@ -207,6 +207,9 @@ public class PetManager {
         currentVelocity.put(p.getUniqueId(), new Vector(0, 0, 0));
         updateStatStatus(p, data);
         startPetTask(p, pet);
+        
+        getAbilityManager().triggerActive(p, "EQUIP");
+        getAbilityManager().triggerPassive(p, "EQUIP", p);
 
         if (msg) p.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.spawn").replace("<name>", data.name())));
     }
@@ -247,6 +250,10 @@ public class PetManager {
         var data = activePetData.get(p.getUniqueId());
         if (!checkFlag(p, WorldGuardHook.PET_RIDE)) {
             p.sendMessage(getComp("pet.worldguard.deny_ride"));
+            return;
+        }
+        if (!p.hasPermission("sincepet.ride")) {
+            p.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.no_permission")));
             return;
         }
         if (data != null && !data.rideable()) {
@@ -902,6 +909,9 @@ public class PetManager {
 
             target.setNoDamageTicks(0);
             MythicLib.plugin.getDamage().registerAttack(new AttackMetadata(physicalMeta, target, damager), true, false);
+
+            getAbilityManager().triggerActive(p, "PET_ATTACK");
+            getAbilityManager().triggerPassive(p, "PET_ATTACK", target);
 
             for (Element element : MythicLib.plugin.getElements().getAll()) {
                 var statKey = UtilityMethods.enumName(element.getId() + "_DAMAGE");

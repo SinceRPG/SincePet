@@ -32,14 +32,22 @@ abilities:
   passive:
     eagle_eye:
       enabled: true
-      mythicmobs_skill: EAGLE_EYE
+      mythicmobs_skill: "EAGLE_EYE"
+      name: "<yellow>Eagle Eye"
+      lore:
+        - "<gray>Sharpens your vision."
+        - "<yellow>Grants Night Vision and glowing targets."
       cooldown: 20
       triggers:
         - PROJECTILE_LAUNCH
   active:
     dive:
       enabled: true
-      mythicmobs_skill: EAGLE_DIVE
+      mythicmobs_skill: "EAGLE_DIVE"
+      name: "<white>Sky Dive"
+      lore:
+        - "<gray>Swoop down on your prey."
+        - "<white>Deals critical fall damage to enemies."
       cooldown: 18
       triggers:
         - ACTIVE

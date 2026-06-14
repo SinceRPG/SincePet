@@ -19,19 +19,23 @@ collection:
       - " <gray>Level: <white><level>"
       - " <gray>Stat Bonus: <green>+<value> <stat>"
       - " <gray>DMG Inheritance: <green><inheritance>%"
-      - " <gray>Abilities: <aqua><skills>"
       - ""
+      - " <gray>Passive Abilities:"
+      - " <skill.passive.1> <dark_gray>[<yellow><skill.trigger.passive.1><dark_gray>]"
+      - " <white><skill.description.passive.1>"
+      - " <skill.passive.2> <dark_gray>[<yellow><skill.trigger.passive.2><dark_gray>]"
+      - " <white><skill.description.passive.2>"
+      - " <gray>Active Abilities:"
+      - " <skill.active.1> <dark_gray>[<yellow><skill.trigger.active.1><dark_gray>]"
+      - " <white><skill.description.active.1>"
+      - " <skill.active.2> <dark_gray>[<yellow><skill.trigger.active.2><dark_gray>]"
+      - " <white><skill.description.active.2>"
       - " <gray>Status: <status>"
       - ""
       - "<yellow>Click to summon!"
     status:
       unlocked: "<green>Unlocked"
       locked: "<red>Locked"
-    skills:
-      format: "<skill> (<triggers>)"
-      separator: ", "
-      trigger_separator: "/"
-      empty: "-"
     display_values:
       # These mappings change how raw config values appear in placeholders.
       # Example: <stat> uses display_values.stats.HEALTH instead of showing HEALTH.
@@ -216,7 +220,7 @@ detail:
         conditions:
           - "active_pet"
           - "rideable"
-          - "permission:pets.ride"
+          - "permission:sincepet.ride"
     settings:
       slot: 13
       material: "COMPARATOR"

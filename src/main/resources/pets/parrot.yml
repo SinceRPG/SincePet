@@ -18,12 +18,20 @@ abilities:
     mimic:
       enabled: true
       mythicmobs_skill: "PARROT_MIMIC"
+      name: "<yellow>Voice Mimic"
+      lore:
+        - "<gray>Confuse your enemies."
+        - "<yellow>Plays random mob sounds."
       cooldown: 5
       triggers:
         - "CHAT"
     takeoff:
       enabled: true
       mythicmobs_skill: "PARROT_FLY"
+      name: "<aqua>Feathered Flight"
+      lore:
+        - "<gray>Take to the skies."
+        - "<aqua>Grants Slow Falling."
       cooldown: 20
       triggers:
         - "FLIGHT_START"
@@ -31,6 +39,10 @@ abilities:
     screech:
       enabled: true
       mythicmobs_skill: "PARROT_SCREECH"
+      name: "<red>Deafening Screech"
+      lore:
+        - "<gray>A loud shriek."
+        - "<red>Applies Weakness to nearby foes."
       cooldown: 15
       triggers:
         - "ACTIVE"

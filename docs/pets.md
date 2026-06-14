@@ -39,7 +39,7 @@ The old monolithic `pets.yml` format with a `pets.<id>` section is still support
 
 `id: PHOENIX` is the pet ID. It is used for:
 
-- Permissions: `pet.phoenix`
+- Permissions: `sincepet.pet.phoenix`
 - Admin commands
 - Saved player data
 

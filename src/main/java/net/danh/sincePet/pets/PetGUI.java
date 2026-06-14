@@ -24,10 +24,7 @@ import org.bukkit.inventory.meta.components.CustomModelDataComponent;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 
 public class PetGUI implements InventoryHolder {
     private static final int INVENTORY_SIZE = 54;
@@ -174,7 +171,7 @@ public class PetGUI implements InventoryHolder {
         String itemPath = gui.getConfig().isConfigurationSection("collection.items." + data.id()) ? "collection.items." + data.id() : "collection.pet_item";
         Material fallbackMaterial = data.texture() == null || data.texture().isBlank() ? Material.PAPER : Material.PLAYER_HEAD;
         List<String> fallbackLore = messages.getStringList("pet.gui.item_lore");
-        Placeholder[] placeholders = new Placeholder[]{
+        List<Placeholder> placeholdersList = new ArrayList<>(Arrays.asList(
                 new Placeholder("<pet>", data.name()),
                 new Placeholder("<name>", data.name()),
                 new Placeholder("<pet_display>", getDisplayValue(gui, "pets", data.id())),
@@ -192,8 +189,9 @@ public class PetGUI implements InventoryHolder {
                 new Placeholder("<passive_skills>", getSkillSummary(gui, data, "passive")),
                 new Placeholder("<status>", statusLine),
                 new Placeholder("<texture>", data.texture() == null ? "" : data.texture())
-        };
-        return createConfiguredItem(gui, itemPath, fallbackMaterial, messages.getString("pet.gui.item_name", "<name>"), fallbackLore, data.texture(), placeholders);
+        ));
+        placeholdersList.addAll(getSkillPlaceholders(gui, data));
+        return createConfiguredItem(gui, itemPath, fallbackMaterial, messages.getString("pet.gui.item_name", "<name>"), fallbackLore, data.texture(), placeholdersList.toArray(new Placeholder[0]));
     }
 
     private void setNavigationButtons(Player p, ConfigUtils gui, int totalPets) {
@@ -223,7 +221,7 @@ public class PetGUI implements InventoryHolder {
         String overridePath = "upgrade_items.items." + upgrade.id();
         String path = gui.getConfig().isConfigurationSection(overridePath) ? overridePath : "upgrade_items." + state;
         int nextLevel = Math.min(level + 1, upgrade.maxLevel());
-        return createConfiguredItem(p, gui, path, upgrade.material(), upgrade.name(), List.of(),
+        List<Placeholder> placeholdersList = new ArrayList<>(Arrays.asList(
                 new Placeholder("<pet>", data.name()),
                 new Placeholder("<pet_id>", data.id()),
                 new Placeholder("<upgrade>", upgrade.name()),
@@ -242,7 +240,10 @@ public class PetGUI implements InventoryHolder {
                 new Placeholder("<next_stat_bonus>", formatNumber(plugin.getPetManager().getUpgradeStatBonus(p, data, upgrade, nextLevel))),
                 new Placeholder("<damage_bonus>", formatNumber(plugin.getPetManager().getUpgradeDamageBonus(p, data, upgrade, level))),
                 new Placeholder("<next_damage_bonus>", formatNumber(plugin.getPetManager().getUpgradeDamageBonus(p, data, upgrade, nextLevel))),
-                new Placeholder("<commands>", String.join(", ", upgrade.commands())));
+                new Placeholder("<commands>", String.join(", ", upgrade.commands()))
+        ));
+        placeholdersList.addAll(getSkillPlaceholders(gui, data));
+        return createConfiguredItem(p, gui, path, upgrade.material(), upgrade.name(), List.of(), placeholdersList.toArray(new Placeholder[0]));
     }
 
     private void fill(Player p, Inventory inventory, ConfigUtils gui) {
@@ -306,7 +307,17 @@ public class PetGUI implements InventoryHolder {
         if (loreRaw.isEmpty()) loreRaw = fallbackLore;
         if (!loreRaw.isEmpty()) {
             List<Component> lore = new ArrayList<>();
-            for (String line : loreRaw) lore.add(ColorUtils.parse(replacePlaceholders(line, placeholders)));
+            for (String line : loreRaw) {
+                String replaced = replacePlaceholders(line, false, placeholders);
+                if (replaced.matches(".*<skill\\.(active|passive)\\.[^>]+>.*") ||
+                    replaced.matches(".*<skill\\.description\\.(active|passive)\\.[^>]+>.*") ||
+                    replaced.matches(".*<skill\\.trigger\\.(active|passive)\\.[^>]+>.*")) {
+                    continue;
+                }
+                for (String splitLine : replaced.split("\\n")) {
+                    lore.add(ColorUtils.parse(splitLine));
+                }
+            }
             meta.lore(lore);
         }
 
@@ -413,9 +424,53 @@ public class PetGUI implements InventoryHolder {
     }
 
     private String replacePlaceholders(String text, Placeholder... placeholders) {
+        return replacePlaceholders(text, true, placeholders);
+    }
+
+    private String replacePlaceholders(String text, boolean cleanUnmatched, Placeholder... placeholders) {
         String output = text == null ? "" : text;
         for (Placeholder placeholder : placeholders) output = output.replace(placeholder.key(), placeholder.value());
+        if (cleanUnmatched) {
+            output = output.replaceAll("<skill\\.(active|passive)\\.[^>]+>", "");
+            output = output.replaceAll("<skill\\.description\\.(active|passive)\\.[^>]+>", "");
+            output = output.replaceAll("<skill\\.trigger\\.(active|passive)\\.[^>]+>", "");
+        }
         return output;
+    }
+
+    private List<Placeholder> getSkillPlaceholders(ConfigUtils gui, PetData data) {
+        List<Placeholder> list = new ArrayList<>();
+        if (data == null) return list;
+        
+        int passiveCount = 1;
+        int activeCount = 1;
+        
+        for (PetSkill skill : data.skills()) {
+            if (!skill.enabled()) continue;
+            String type = skill.type().toLowerCase(Locale.ROOT);
+            String id = skill.id();
+            
+            int index = type.equals("passive") ? passiveCount++ : activeCount++;
+
+            String skillName = skill.name() != null && !skill.name().isBlank() ? skill.name() : getDisplayValue(gui, "skills", skill.skillId());
+            if (skillName == null || skillName.isBlank()) skillName = skill.skillId();
+
+            list.add(new Placeholder("<skill." + type + "." + id + ">", skillName));
+            list.add(new Placeholder("<skill." + type + "." + index + ">", skillName));
+
+            if (skill.lore() != null && !skill.lore().isEmpty() && !String.join("", skill.lore()).isBlank()) {
+                String desc = String.join("\n", skill.lore()) + "\n";
+                list.add(new Placeholder("<skill.description." + type + "." + id + ">", desc));
+                list.add(new Placeholder("<skill.description." + type + "." + index + ">", desc));
+            }
+
+            String triggers = skill.triggers().stream()
+                    .map(trigger -> getDisplayValue(gui, "triggers", trigger))
+                    .collect(java.util.stream.Collectors.joining("/"));
+            list.add(new Placeholder("<skill.trigger." + type + "." + id + ">", triggers));
+            list.add(new Placeholder("<skill.trigger." + type + "." + index + ">", triggers));
+        }
+        return list;
     }
 
     private String formatNumber(double value) {

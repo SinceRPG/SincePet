@@ -88,7 +88,7 @@ public class PetAbilityManager {
     }
 
     private boolean useActiveAbility(Player p, String abilityId, String trigger, boolean notify) {
-        if (!p.hasPermission("pets.skill")) {
+        if (!p.hasPermission("sincepet.skill")) {
             if (notify) p.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.no_permission")));
             return false;
         }

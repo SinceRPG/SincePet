@@ -18,6 +18,10 @@ abilities:
     berry_eat:
       enabled: true
       mythicmobs_skill: "FOX_HEAL"
+      name: "<green>Vulpine Mend"
+      lore:
+        - "<gray>A soothing aura."
+        - "<green>Slowly heals you over time."
       cooldown: 15
       triggers:
         - "ITEM_CONSUME"
@@ -25,6 +29,10 @@ abilities:
     dash:
       enabled: true
       mythicmobs_skill: "FOX_DASH"
+      name: "<white>Swift Dash"
+      lore:
+        - "<gray>Quick reflexes."
+        - "<white>Leap forward to escape danger."
       cooldown: 5
       triggers:
         - "SPRINT_START"

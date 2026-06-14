@@ -46,7 +46,11 @@ abilities:
   passive:
     monkey_agility:
       enabled: true
-      mythicmobs_skill: MONKEY_AGILITY
+      mythicmobs_skill: "MONKEY_AGILITY"
+      name: "<yellow>Primate Agility"
+      lore:
+        - "<gray>Nimble movements."
+        - "<yellow>Grants Speed."
       cooldown: 10
       triggers:
         - MOVE
@@ -54,7 +58,11 @@ abilities:
   active:
     banana_toss:
       enabled: true
-      mythicmobs_skill: BANANA_TOSS
+      mythicmobs_skill: "BANANA_TOSS"
+      name: "<gold>Banana Toss"
+      lore:
+        - "<gray>Throws a slippery banana."
+        - "<gold>Stuns the target briefly."
       cooldown: 15
       triggers:
         - ACTIVE

@@ -15,6 +15,10 @@ abilities:
     counter_howl:
       enabled: false
       mythicmobs_skill: "ARCANE_HAIL"
+      name: "<aqua>Arcane Hail"
+      lore:
+        - "<gray>Summons a shower of magic."
+        - "<aqua>Strikes targets with arcane bolts."
       cooldown: 8
       triggers:
         - "OWNER_DAMAGED"
@@ -22,6 +26,10 @@ abilities:
     rift_bite:
       enabled: false
       mythicmobs_skill: "ARCANE_RIFT"
+      name: "<light_purple>Arcane Rift"
+      lore:
+        - "<gray>Tears the fabric of space."
+        - "<light_purple>Teleports you a short distance."
       cooldown: 12
       triggers:
         - "ACTIVE"

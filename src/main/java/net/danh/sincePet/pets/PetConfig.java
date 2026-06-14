@@ -111,9 +111,13 @@ public class PetConfig {
         for (String key : section.getKeys(false)) {
             String path = key + ".";
             String skillId = parseSkillId(section.getString(path + "mythicmobs_skill", section.getString(path + "source", "")));
+            String name = section.getString(path + "name", "");
+            List<String> lore = section.getStringList(path + "lore");
             skills.add(new PetSkill(
                     key,
                     type,
+                    name,
+                    lore,
                     section.getBoolean(path + "enabled", true),
                     skillId,
                     parseTriggers(section, path + "triggers", type),

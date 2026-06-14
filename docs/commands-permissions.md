@@ -21,9 +21,9 @@
 | Permission | Description |
 | --- | --- |
 | `sincepet.admin` | Allows use of `/sincepet` admin commands. |
-| `pet.hasall` | Allows the player to see, summon, and restore all pets without per-pet nodes. |
-| `pet.<pet_id>` | Allows the player to see, summon, and restore a specific pet. Example: `pet.monkey`. |
-| `pets.ride` | Allows riding pets through `/pet ride`, the GUI ride button, and right-clicking the active pet. |
-| `pets.skill` | Allows using active pet abilities through `/pet skill`. |
+| `sincepet.pet.hasall` | Allows the player to see, summon, and restore all pets without per-pet nodes. |
+| `sincepet.pet.<pet_id>` | Allows the player to see, summon, and restore a specific pet. Example: `sincepet.pet.monkey`. |
+| `sincepet.ride` | Allows riding pets through `/pet ride`, the GUI ride button, and right-clicking the active pet. |
+| `sincepet.skill` | Allows using active pet abilities through `/pet skill`. |
 
 Pet IDs are read from `pets/*.yml`, and collection listings follow the order in `pets.yml`.

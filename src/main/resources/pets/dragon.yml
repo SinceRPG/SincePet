@@ -32,14 +32,22 @@ abilities:
   passive:
     dragon_scales:
       enabled: true
-      mythicmobs_skill: DRAGON_SCALES
+      mythicmobs_skill: "DRAGON_SCALES"
+      name: "<gold>Dragon Scales"
+      lore:
+        - "<gray>Hardens your skin."
+        - "<gold>Increases armor toughness."
       cooldown: 30
       triggers:
         - OWNER_DAMAGED_BY_ENTITY
   active:
     breath:
       enabled: true
-      mythicmobs_skill: DRAGON_BREATH
+      mythicmobs_skill: "DRAGON_BREATH"
+      name: "<light_purple>Dragon's Breath"
+      lore:
+        - "<gray>Unleashes a cone of magic fire."
+        - "<light_purple>Burns enemies in front of you."
       cooldown: 25
       triggers:
         - ACTIVE

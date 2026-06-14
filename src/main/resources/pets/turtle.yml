@@ -32,14 +32,22 @@ abilities:
   passive:
     shell_shield:
       enabled: true
-      mythicmobs_skill: TURTLE_SHIELD
+      mythicmobs_skill: "TURTLE_SHIELD"
+      name: "<green>Shell Shield"
+      lore:
+        - "<gray>Retract into your shell."
+        - "<green>Grants Resistance."
       cooldown: 20
       triggers:
         - SNEAK_START
   active:
     water_spout:
       enabled: true
-      mythicmobs_skill: TURTLE_SPOUT
+      mythicmobs_skill: "TURTLE_SPOUT"
+      name: "<aqua>Water Spout"
+      lore:
+        - "<gray>Shoot a jet of water."
+        - "<aqua>Douses fires and damages mobs."
       cooldown: 15
       triggers:
         - ACTIVE

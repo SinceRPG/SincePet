@@ -221,10 +221,13 @@ def layout(title: str, body: str, active: str, is_home: bool) -> str:
 def main() -> int:
     source_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("docs")
     output_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("wiki")
-    if output_dir.exists():
+    if output_dir.exists() and source_dir.resolve() != output_dir.resolve():
         shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True)
-    shutil.copy2(source_dir / "wiki.css", output_dir / "wiki.css")
+        output_dir.mkdir(parents=True)
+        shutil.copy2(source_dir / "wiki.css", output_dir / "wiki.css")
+    elif not output_dir.exists():
+        output_dir.mkdir(parents=True)
+        shutil.copy2(source_dir / "wiki.css", output_dir / "wiki.css")
 
     for source, label in PAGES:
         text = (source_dir / source).read_text(encoding="utf-8")

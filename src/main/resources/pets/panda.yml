@@ -32,7 +32,11 @@ abilities:
   passive:
     bamboo_snack:
       enabled: true
-      mythicmobs_skill: PANDA_EAT
+      mythicmobs_skill: "PANDA_EAT"
+      name: "<green>Bamboo Snack"
+      lore:
+        - "<gray>Munch on bamboo."
+        - "<green>Restores hunger points."
       cooldown: 15
       triggers:
         - ITEM_CONSUME
@@ -40,7 +44,11 @@ abilities:
   active:
     roll:
       enabled: true
-      mythicmobs_skill: PANDA_ROLL
+      mythicmobs_skill: "PANDA_ROLL"
+      name: "<white>Panda Roll"
+      lore:
+        - "<gray>Roll away from danger."
+        - "<white>Evades incoming attacks."
       cooldown: 10
       triggers:
         - ACTIVE

@@ -18,6 +18,10 @@ abilities:
     sleepy_heal:
       enabled: true
       mythicmobs_skill: "SLOTH_HEAL"
+      name: "<green>Sluggish Recovery"
+      lore:
+        - "<gray>Slow but steady."
+        - "<green>Regenerates health while standing still."
       cooldown: 60
       triggers:
         - "BED_ENTER"
@@ -26,6 +30,10 @@ abilities:
     yawn:
       enabled: true
       mythicmobs_skill: "SLOTH_YAWN"
+      name: "<gray>Contagious Yawn"
+      lore:
+        - "<gray>Makes enemies sleepy."
+        - "<gray>Applies Slowness to foes."
       cooldown: 20
       triggers:
         - "ACTIVE"
