@@ -12,7 +12,7 @@ public class ColorUtils {
 
     public static @NotNull Component parse(@NotNull String input) {
         String safeInput = convertLegacyToMiniMessage(input);
-        return SincePet.getPlugin().getMiniMessage().deserialize(safeInput);
+        return SincePet.getPlugin().getMiniMessage().deserialize(safeInput).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false);
     }
 
     public static @NotNull Component parseWithPrefix(@NotNull String input) {
