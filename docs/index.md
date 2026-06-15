@@ -6,7 +6,14 @@ drops, and WorldGuard region control.
 
 This wiki is written for server owners who want to configure the plugin without reading Java code. Start with
 Installation if this is a new setup, or jump straight to GUI and Upgrades if you are customizing menus.
-
+<div class="cards">
+  <a class="card" href="installation.html"><strong>Install</strong><span>Server requirements, first start, and updating existing files.</span></a>
+  <a class="card" href="configuration.html"><strong>Configure</strong><span>Display offsets, riding physics, database, follow behavior, and combat.</span></a>
+  <a class="card" href="pets.html"><strong>Create Pets</strong><span>Textures, stats, XP formulas, attacks, riding, and permissions.</span></a>
+  <a class="card" href="upgrades.html"><strong>Build Upgrades</strong><span>Level upgrades, PlaceholderAPI checks, friendly requirement text, and commands.</span></a>
+  <a class="card" href="gui.html"><strong>Customize GUI</strong><span>Every item meta field, pet display value, placeholder, and per-pet/per-upgrade override.</span></a>
+  <a class="card" href="troubleshooting.html"><strong>Fix Issues</strong><span>Name offsets, riding visuals, PlaceholderAPI values, and missing config keys.</span></a>
+</div>
 
 
 ## Main Sections
