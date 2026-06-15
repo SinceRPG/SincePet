@@ -17,31 +17,16 @@ import io.lumine.mythic.lib.element.Element;
 import io.lumine.mythic.lib.player.modifier.ModifierSource;
 import io.lumine.mythic.lib.player.modifier.ModifierType;
 import io.papermc.paper.entity.TeleportFlag;
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import net.danh.sincePet.SincePet;
 import net.danh.sincePet.hooks.WorldGuardHook;
 import net.danh.sincePet.utils.Calculator;
 import net.danh.sincePet.utils.ColorUtils;
 import net.danh.sincePet.utils.SchedulerUtils;
 import net.kyori.adventure.text.Component;
-import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
-import org.bukkit.Bukkit;
-import org.bukkit.FluidCollisionMode;
-import org.bukkit.Input;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Particle;
-import org.bukkit.Registry;
-import org.bukkit.Sound;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Display;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.ItemDisplay;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.TextDisplay;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.util.BoundingBox;
@@ -50,12 +35,7 @@ import org.bukkit.util.Vector;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -178,6 +158,17 @@ public class PetManager {
             return;
         }
 
+        if (data.mmocoreClasses() != null && !data.mmocoreClasses().isEmpty()) {
+            if (plugin.getServer().getPluginManager().isPluginEnabled("MMOCore")) {
+                String playerClass = net.danh.sincePet.hooks.MMOCoreHook.getPlayerClass(p);
+                if (playerClass != null && !data.mmocoreClasses().contains(playerClass.toUpperCase(java.util.Locale.ROOT))) {
+                    if (msg)
+                        p.sendMessage(net.danh.sincePet.utils.ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.mmocore.wrong_class", "&cYour class cannot use this pet!")));
+                    return;
+                }
+            }
+        }
+
         removePetVisuals(p);
         var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
         if (s != null) s.setActivePetId(data.id());
@@ -207,7 +198,7 @@ public class PetManager {
         currentVelocity.put(p.getUniqueId(), new Vector(0, 0, 0));
         updateStatStatus(p, data);
         startPetTask(p, pet);
-        
+
         getAbilityManager().triggerActive(p, "EQUIP");
         getAbilityManager().triggerPassive(p, "EQUIP", p);
 
@@ -880,7 +871,8 @@ public class PetManager {
     private void handleAttack(Player p, ItemDisplay pet, PetData data) {
         if (!hasMythicLib) return;
         if (p.getWorld() != pet.getWorld()) return;
-        if (data.range() <= 0 || !checkFlag(p, WorldGuardHook.PET_ATTACK) || !getPetSetting(p, data.id(), "auto_attack", true)) return;
+        if (data.range() <= 0 || !checkFlag(p, WorldGuardHook.PET_ATTACK) || !getPetSetting(p, data.id(), "auto_attack", true))
+            return;
 
         long now = System.currentTimeMillis();
 

@@ -2,18 +2,12 @@ package net.danh.sincePet.pets;
 
 import net.danh.sincePet.SincePet;
 import net.danh.sincePet.utils.ConfigUtils;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public class PetConfig {
     private final SincePet plugin;
@@ -90,7 +84,8 @@ public class PetConfig {
         String maxXpFormula = section.getString(path + "max_xp_formula", "100 * <level>");
 
         List<PetSkill> loadedSkills = loadSkills(section, path);
-        pets.put(key, new PetData(key, name, texture, stat, formula, range, cooldown, dmgFormula, inheritance, attackParticle, rideable, canFly, maxXpFormula, loadUpgrades(section.getConfigurationSection(path + "upgrades")), loadedSkills));
+        List<String> mmocoreClasses = section.getStringList(path + "mmocore_classes").stream().map(c -> c.toUpperCase(Locale.ROOT)).toList();
+        pets.put(key, new PetData(key, name, texture, stat, formula, range, cooldown, dmgFormula, inheritance, attackParticle, rideable, canFly, maxXpFormula, loadUpgrades(section.getConfigurationSection(path + "upgrades")), loadedSkills, mmocoreClasses));
         debug("[DEBUG] Loaded pet '" + key + "' with " + loadedSkills.size() + " skills.");
     }
 

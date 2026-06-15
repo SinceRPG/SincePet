@@ -28,12 +28,12 @@ pet:
 
 Common placeholders:
 
-| Placeholder | Meaning |
-| --- | --- |
-| `<name>` | Pet display name. |
-| `<level>` | Pet level. |
-| `<target>` | Target player. |
-| `<pet>` | Pet ID or display label. |
+| Placeholder | Meaning                  |
+|-------------|--------------------------|
+| `<name>`    | Pet display name.        |
+| `<level>`   | Pet level.               |
+| `<target>`  | Target player.           |
+| `<pet>`     | Pet ID or display label. |
 
 ## Display Name Format
 

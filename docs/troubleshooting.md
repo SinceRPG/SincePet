@@ -70,4 +70,5 @@ This item only appears if the player has an active pet.
 
 ## Existing YAML files do not contain new keys
 
-Bukkit does not merge new resource keys into existing config files. Compare your generated files with the repository files and copy new sections manually.
+Bukkit does not merge new resource keys into existing config files. Compare your generated files with the repository
+files and copy new sections manually.

@@ -8,18 +8,19 @@ display:
     - "active_pet"
 ```
 
-Conditions are checked when rendering the item and again when clicking the slot. Hidden actions cannot be triggered by clicking an empty slot.
+Conditions are checked when rendering the item and again when clicking the slot. Hidden actions cannot be triggered by
+clicking an empty slot.
 
 ## Conditions
 
-| Condition | Meaning |
-| --- | --- |
-| `active_pet` | Player has an active pet. |
-| `no_active_pet` | Player does not have an active pet. |
-| `rideable` | Active pet can be ridden. |
-| `has_upgrades` | Active pet has at least one upgrade. |
-| `permission:<permission>` | Player has the permission. |
-| `setting:<setting_id>` | Active pet setting is enabled. |
+| Condition                 | Meaning                              |
+|---------------------------|--------------------------------------|
+| `active_pet`              | Player has an active pet.            |
+| `no_active_pet`           | Player does not have an active pet.  |
+| `rideable`                | Active pet can be ridden.            |
+| `has_upgrades`            | Active pet has at least one upgrade. |
+| `permission:<permission>` | Player has the permission.           |
+| `setting:<setting_id>`    | Active pet setting is enabled.       |
 
 ## Negating Conditions
 

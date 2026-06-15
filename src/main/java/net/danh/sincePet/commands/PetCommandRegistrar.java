@@ -70,8 +70,10 @@ public class PetCommandRegistrar {
                                     })
                                     .executes(ctx -> {
                                         var target = Bukkit.getPlayer(StringArgumentType.getString(ctx, "target"));
-                                        if (target != null) plugin.getPetManager().levelUp(target, ctx.getSource().getSender());
-                                        else ctx.getSource().getSender().sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.command.player_not_found")));
+                                        if (target != null)
+                                            plugin.getPetManager().levelUp(target, ctx.getSource().getSender());
+                                        else
+                                            ctx.getSource().getSender().sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.command.player_not_found")));
                                         return 1;
                                     })))
                     .then(Commands.literal("max_level")
@@ -79,7 +81,8 @@ public class PetCommandRegistrar {
                                     .suggests((ctx, builder) -> {
                                         var input = builder.getRemaining().toLowerCase();
                                         for (Player p : Bukkit.getOnlinePlayers()) {
-                                            if (p.getName().toLowerCase().startsWith(input)) builder.suggest(p.getName());
+                                            if (p.getName().toLowerCase().startsWith(input))
+                                                builder.suggest(p.getName());
                                         }
                                         return builder.buildFuture();
                                     })

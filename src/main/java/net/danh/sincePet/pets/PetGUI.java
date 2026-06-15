@@ -13,9 +13,9 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -29,19 +29,10 @@ import java.util.*;
 public class PetGUI implements InventoryHolder {
     private static final int INVENTORY_SIZE = 54;
     private static final int ITEMS_PER_PAGE = 45;
-
-    public enum View {
-        COLLECTION,
-        DETAIL,
-        SETTINGS,
-        UPGRADES
-    }
-
     private final SincePet plugin;
     private final int page;
     private final View view;
     private Inventory inv;
-
     public PetGUI(SincePet plugin, int page) {
         this(plugin, page, View.COLLECTION);
     }
@@ -310,8 +301,8 @@ public class PetGUI implements InventoryHolder {
             for (String line : loreRaw) {
                 String replaced = replacePlaceholders(line, false, placeholders);
                 if (replaced.matches(".*<skill\\.(active|passive)\\.[^>]+>.*") ||
-                    replaced.matches(".*<skill\\.description\\.(active|passive)\\.[^>]+>.*") ||
-                    replaced.matches(".*<skill\\.trigger\\.(active|passive)\\.[^>]+>.*")) {
+                        replaced.matches(".*<skill\\.description\\.(active|passive)\\.[^>]+>.*") ||
+                        replaced.matches(".*<skill\\.trigger\\.(active|passive)\\.[^>]+>.*")) {
                     continue;
                 }
                 for (String splitLine : replaced.split("\\n")) {
@@ -441,15 +432,15 @@ public class PetGUI implements InventoryHolder {
     private List<Placeholder> getSkillPlaceholders(ConfigUtils gui, PetData data) {
         List<Placeholder> list = new ArrayList<>();
         if (data == null) return list;
-        
+
         int passiveCount = 1;
         int activeCount = 1;
-        
+
         for (PetSkill skill : data.skills()) {
             if (!skill.enabled()) continue;
             String type = skill.type().toLowerCase(Locale.ROOT);
             String id = skill.id();
-            
+
             int index = type.equals("passive") ? passiveCount++ : activeCount++;
 
             String skillName = skill.name() != null && !skill.name().isBlank() ? skill.name() : getDisplayValue(gui, "skills", skill.skillId());
@@ -526,11 +517,18 @@ public class PetGUI implements InventoryHolder {
                 .replace("<current_value>", plugin.getPetManager().getResolvedUpgradeRequirement(p, upgrade));
     }
 
-    private record Placeholder(String key, String value) {
-    }
-
     @Override
     public @NotNull Inventory getInventory() {
         return inv;
+    }
+
+    public enum View {
+        COLLECTION,
+        DETAIL,
+        SETTINGS,
+        UPGRADES
+    }
+
+    private record Placeholder(String key, String value) {
     }
 }

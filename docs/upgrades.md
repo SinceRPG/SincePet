@@ -30,7 +30,8 @@ upgrades:
 - GUI per-upgrade override keys
 - Command placeholders
 
-Do not rename upgrade IDs on a live server unless you are okay with old saved upgrade levels no longer matching the renamed upgrade.
+Do not rename upgrade IDs on a live server unless you are okay with old saved upgrade levels no longer matching the
+renamed upgrade.
 
 ## GUI Material and Slot
 
@@ -68,16 +69,16 @@ stat_bonus_formula: "1.2 * <upgrade_level>"
 damage_bonus_formula: "4 * <upgrade_level>"
 ```
 
-| Formula | Used For |
-| --- | --- |
-| `stat_bonus_formula` | Adds to the pet's MythicLib stat bonus. |
-| `damage_bonus_formula` | Adds to the pet's base attack damage. |
+| Formula                | Used For                                |
+|------------------------|-----------------------------------------|
+| `stat_bonus_formula`   | Adds to the pet's MythicLib stat bonus. |
+| `damage_bonus_formula` | Adds to the pet's base attack damage.   |
 
 Available placeholders:
 
-| Placeholder | Meaning |
-| --- | --- |
-| `<level>` | Current pet level. |
+| Placeholder       | Meaning                |
+|-------------------|------------------------|
+| `<level>`         | Current pet level.     |
 | `<upgrade_level>` | Current upgrade level. |
 
 ## Requirement Logic
@@ -89,18 +90,19 @@ requirement:
   value: "20"
 ```
 
-The plugin resolves the PlaceholderAPI text in `papi`, compares it to `value`, and only upgrades if the comparison passes.
+The plugin resolves the PlaceholderAPI text in `papi`, compares it to `value`, and only upgrades if the comparison
+passes.
 
 Supported comparisons:
 
-| Compare | Meaning |
-| --- | --- |
-| `>=` | Greater than or equal. |
-| `>` | Greater than. |
-| `<=` | Less than or equal. |
-| `<` | Less than. |
-| `=`, `==` | Equal. |
-| `!=` | Not equal. |
+| Compare   | Meaning                |
+|-----------|------------------------|
+| `>=`      | Greater than or equal. |
+| `>`       | Greater than.          |
+| `<=`      | Less than or equal.    |
+| `<`       | Less than.             |
+| `=`, `==` | Equal.                 |
+| `!=`      | Not equal.             |
 
 ## Requirement Display
 
@@ -135,17 +137,18 @@ commands:
   - "points take <player> 20"
 ```
 
-Commands run from console after the upgrade succeeds. Use this to remove points, money, items, or run any other server command.
+Commands run from console after the upgrade succeeds. Use this to remove points, money, items, or run any other server
+command.
 
 Available command placeholders:
 
-| Placeholder | Meaning |
-| --- | --- |
-| `<player>` | Player name. |
-| `<uuid>` | Player UUID. |
-| `<pet>` | Pet ID. |
-| `<upgrade>` | Upgrade ID. |
-| `<level>` | New upgrade level after success. |
+| Placeholder | Meaning                          |
+|-------------|----------------------------------|
+| `<player>`  | Player name.                     |
+| `<uuid>`    | Player UUID.                     |
+| `<pet>`     | Pet ID.                          |
+| `<upgrade>` | Upgrade ID.                      |
+| `<level>`   | New upgrade level after success. |
 
 ## Recommended Pattern
 
@@ -161,4 +164,5 @@ commands:
   - "points take <player> 20"
 ```
 
-The requirement checks whether the player has enough points. The command removes the points after the upgrade is applied.
+The requirement checks whether the player has enough points. The command removes the points after the upgrade is
+applied.

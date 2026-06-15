@@ -27,7 +27,8 @@ Optional server plugins:
 
 ## Updating
 
-When a new version adds keys to resource YAML files, Bukkit does not automatically merge them into existing files. Compare the new files in the jar or repository with your server files.
+When a new version adds keys to resource YAML files, Bukkit does not automatically merge them into existing files.
+Compare the new files in the jar or repository with your server files.
 
 The most important files to merge after this version are:
 

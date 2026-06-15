@@ -76,9 +76,12 @@ public class PetListener implements Listener {
                     new PetGUI(plugin, 1, PetGUI.View.DETAIL).open(p);
                     return;
                 }
-                if (slot == guiConfig.getInt("settings.show_name.slot", 10)) plugin.getPetManager().togglePetSetting(p, "show_name");
-                if (slot == guiConfig.getInt("settings.auto_attack.slot", 12)) plugin.getPetManager().togglePetSetting(p, "auto_attack");
-                if (slot == guiConfig.getInt("settings.stat_buff.slot", 14)) plugin.getPetManager().togglePetSetting(p, "stat_buff");
+                if (slot == guiConfig.getInt("settings.show_name.slot", 10))
+                    plugin.getPetManager().togglePetSetting(p, "show_name");
+                if (slot == guiConfig.getInt("settings.auto_attack.slot", 12))
+                    plugin.getPetManager().togglePetSetting(p, "auto_attack");
+                if (slot == guiConfig.getInt("settings.stat_buff.slot", 14))
+                    plugin.getPetManager().togglePetSetting(p, "stat_buff");
                 new PetGUI(plugin, 1, PetGUI.View.SETTINGS).open(p);
                 return;
             }

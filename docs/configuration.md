@@ -71,19 +71,20 @@ pet:
 
 Display keys:
 
-| Key | Description |
-| --- | --- |
-| `item_transform` | ItemDisplay transform mode. `FIXED` is recommended for player head pets. |
-| `billboard` | ItemDisplay billboard mode. |
-| `scale` | Pet visual scale. |
-| `offset_y` | Visual Y offset while following. More negative means lower. |
-| `ride_offset_y` | Visual Y offset while riding. More negative means lower under the rider. |
-| `name_offset_y` | TextDisplay name height while following. |
-| `ride_name_offset_y` | TextDisplay name height while riding. |
-| `view_range` | Pet display view range. |
-| `name_view_range` | Name display view range. |
+| Key                  | Description                                                              |
+|----------------------|--------------------------------------------------------------------------|
+| `item_transform`     | ItemDisplay transform mode. `FIXED` is recommended for player head pets. |
+| `billboard`          | ItemDisplay billboard mode.                                              |
+| `scale`              | Pet visual scale.                                                        |
+| `offset_y`           | Visual Y offset while following. More negative means lower.              |
+| `ride_offset_y`      | Visual Y offset while riding. More negative means lower under the rider. |
+| `name_offset_y`      | TextDisplay name height while following.                                 |
+| `ride_name_offset_y` | TextDisplay name height while riding.                                    |
+| `view_range`         | Pet display view range.                                                  |
+| `name_view_range`    | Name display view range.                                                 |
 
-The name is a separate `TextDisplay`, not the custom name of the `ItemDisplay`. This prevents the name from being forced into the wrong position when changing pet visual offsets.
+The name is a separate `TextDisplay`, not the custom name of the `ItemDisplay`. This prevents the name from being forced
+into the wrong position when changing pet visual offsets.
 
 ## Follow Behavior
 
@@ -100,16 +101,16 @@ pet:
     bob_speed: 0.15
 ```
 
-| Key | Description |
-| --- | --- |
-| `side_offset` | Pet position to the side of the player. |
-| `back_offset` | Pet distance behind the player. |
-| `vertical_offset` | Pet follow height. |
-| `move_lerp` | Follow smoothing while moving. Higher values catch up faster. |
-| `idle_lerp` | Rotation smoothing while idle. |
-| `bob_amplitude` | Floating movement amount while moving. |
-| `idle_bob_amplitude` | Floating movement amount while idle. |
-| `bob_speed` | Floating animation speed. |
+| Key                  | Description                                                   |
+|----------------------|---------------------------------------------------------------|
+| `side_offset`        | Pet position to the side of the player.                       |
+| `back_offset`        | Pet distance behind the player.                               |
+| `vertical_offset`    | Pet follow height.                                            |
+| `move_lerp`          | Follow smoothing while moving. Higher values catch up faster. |
+| `idle_lerp`          | Rotation smoothing while idle.                                |
+| `bob_amplitude`      | Floating movement amount while moving.                        |
+| `idle_bob_amplitude` | Floating movement amount while idle.                          |
+| `bob_speed`          | Floating animation speed.                                     |
 
 ## Riding Physics
 
@@ -130,7 +131,8 @@ pet:
     teleport_duration: 2
 ```
 
-`seat_offset` controls the entity origin used for movement and collision. `ride_offset_y` controls only how the pet visual is drawn under the rider.
+`seat_offset` controls the entity origin used for movement and collision. `ride_offset_y` controls only how the pet
+visual is drawn under the rider.
 
 ## Combat
 

@@ -4,7 +4,8 @@ SincePet hooks into MythicMobs to support pet EXP drops.
 
 ## Pet EXP
 
-Pet EXP is applied to the player's active pet. When enough EXP is collected, the pet levels up according to `max_xp_formula` in that pet's `pets/*.yml` file.
+Pet EXP is applied to the player's active pet. When enough EXP is collected, the pet levels up according to
+`max_xp_formula` in that pet's `pets/*.yml` file.
 
 If the pet is already at its max level, the plugin shows the max-level action bar message from `messages.yml`.
 

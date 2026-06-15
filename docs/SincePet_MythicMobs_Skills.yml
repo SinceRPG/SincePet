@@ -9,186 +9,186 @@
 
 ARCANE_HAIL:
   Skills:
-  - effect:particles{p=enchantmenttable;a=50;s=0.5;y=1} @self
-  - damage{amount=5} @EntitiesInRadius{r=5}
+    - effect:particles{p=enchantmenttable;a=50;s=0.5;y=1} @self
+    - damage{amount=5} @EntitiesInRadius{r=5}
 
 ARCANE_RIFT:
   Skills:
-  - effect:particles{p=portal;a=100;s=1;y=1} @self
-  - pull{velocity=0.5} @EntitiesInRadius{r=10}
+    - effect:particles{p=portal;a=100;s=1;y=1} @self
+    - pull{velocity=0.5} @EntitiesInRadius{r=10}
 
 MONKEY_AGILITY:
   Skills:
-  - potion{type=SPEED;duration=60;level=1} @self
-  - effect:particles{p=cloud;a=10;s=0.2;y=0.5} @self
+    - potion{type=SPEED;duration=60;level=1} @self
+    - effect:particles{p=cloud;a=10;s=0.2;y=0.5} @self
 
 BANANA_TOSS:
   Skills:
-  - projectile{onTick=BANANA_TICK;onHit=BANANA_HIT;v=20;i=1;hR=1;vR=1} @TargetLocation
+    - projectile{onTick=BANANA_TICK;onHit=BANANA_HIT;v=20;i=1;hR=1;vR=1} @TargetLocation
 BANANA_TICK:
   Skills:
-  - effect:particles{p=crit;a=1} @origin
+    - effect:particles{p=crit;a=1} @origin
 BANANA_HIT:
   Skills:
-  - damage{amount=10} @EntitiesInRadius{r=2}
-  - potion{type=SLOW;duration=40;level=1} @EntitiesInRadius{r=2}
+    - damage{amount=10} @EntitiesInRadius{r=2}
+    - potion{type=SLOW;duration=40;level=1} @EntitiesInRadius{r=2}
 
 WOLF_HOWL:
   Skills:
-  - potion{type=INCREASE_DAMAGE;duration=100;level=1} @self
-  - sound{s=entity.wolf.howl;v=1;p=1} @self
-  - effect:particles{p=note;a=5;s=0.5;y=1} @self
+    - potion{type=INCREASE_DAMAGE;duration=100;level=1} @self
+    - sound{s=entity.wolf.howl;v=1;p=1} @self
+    - effect:particles{p=note;a=5;s=0.5;y=1} @self
 
 WOLF_BITE:
   Skills:
-  - damage{amount=8;ignorearmor=true} @Target
-  - effect:particles{p=crit_magic;a=20;s=0.5;y=1} @Target
-  - sound{s=entity.wolf.ambient;v=1;p=1.5} @Target
+    - damage{amount=8;ignorearmor=true} @Target
+    - effect:particles{p=crit_magic;a=20;s=0.5;y=1} @Target
+    - sound{s=entity.wolf.ambient;v=1;p=1.5} @Target
 
 PHOENIX_REBIRTH:
   Skills:
-  - heal{amount=20} @self
-  - potion{type=FIRE_RESISTANCE;duration=200;level=1} @self
-  - effect:particles{p=flame;a=100;s=0.5;y=1} @self
-  - sound{s=entity.ender_dragon.growl;v=1;p=2} @self
+    - heal{amount=20} @self
+    - potion{type=FIRE_RESISTANCE;duration=200;level=1} @self
+    - effect:particles{p=flame;a=100;s=0.5;y=1} @self
+    - sound{s=entity.ender_dragon.growl;v=1;p=2} @self
 
 PHOENIX_FIREBALL:
   Skills:
-  - shootfireball{y=1;v=2} @TargetLocation
-  - sound{s=entity.ghast.shoot;v=1;p=1} @self
+    - shootfireball{y=1;v=2} @TargetLocation
+    - sound{s=entity.ghast.shoot;v=1;p=1} @self
 
 TURTLE_SHIELD:
   Skills:
-  - potion{type=DAMAGE_RESISTANCE;duration=100;level=2} @self
-  - effect:particles{p=water_splash;a=30;s=0.5;y=1} @self
-  - sound{s=entity.turtle.ambient_land;v=1;p=1} @self
+    - potion{type=DAMAGE_RESISTANCE;duration=100;level=2} @self
+    - effect:particles{p=water_splash;a=30;s=0.5;y=1} @self
+    - sound{s=entity.turtle.ambient_land;v=1;p=1} @self
 
 TURTLE_SPOUT:
   Skills:
-  - effect:particles{p=water_drop;a=100;s=0.5;y=1} @self
-  - damage{amount=5;element=water} @EntitiesInRadius{r=5}
-  - push{velocity=1} @EntitiesInRadius{r=5}
+    - effect:particles{p=water_drop;a=100;s=0.5;y=1} @self
+    - damage{amount=5;element=water} @EntitiesInRadius{r=5}
+    - push{velocity=1} @EntitiesInRadius{r=5}
 
 DRAGON_SCALES:
   Skills:
-  - potion{type=ABSORPTION;duration=200;level=1} @self
-  - effect:particles{p=dragon_breath;a=20;s=0.2;y=1} @self
+    - potion{type=ABSORPTION;duration=200;level=1} @self
+    - effect:particles{p=dragon_breath;a=20;s=0.2;y=1} @self
 
 DRAGON_BREATH:
   Skills:
-  - effect:particles{p=dragon_breath;a=100;s=0.5;y=1} @self
-  - damage{amount=15;element=fire} @EntitiesInRadius{r=7}
-  - ignite{ticks=100} @EntitiesInRadius{r=7}
-  - sound{s=entity.ender_dragon.shoot;v=1;p=1} @self
+    - effect:particles{p=dragon_breath;a=100;s=0.5;y=1} @self
+    - damage{amount=15;element=fire} @EntitiesInRadius{r=7}
+    - ignite{ticks=100} @EntitiesInRadius{r=7}
+    - sound{s=entity.ender_dragon.shoot;v=1;p=1} @self
 
 TIGER_POUNCE:
   Skills:
-  - leap{velocity=1.5} @TargetLocation
-  - effect:particles{p=crit;a=30;s=0.5;y=0.5} @self
+    - leap{velocity=1.5} @TargetLocation
+    - effect:particles{p=crit;a=30;s=0.5;y=0.5} @self
 
 TIGER_ROAR:
   Skills:
-  - potion{type=SLOW;duration=60;level=2} @EntitiesInRadius{r=8}
-  - potion{type=WEAKNESS;duration=60;level=1} @EntitiesInRadius{r=8}
-  - effect:particles{p=sweep_attack;a=10;s=0.5;y=1} @self
-  - sound{s=entity.ender_dragon.growl;v=1;p=1.5} @self
+    - potion{type=SLOW;duration=60;level=2} @EntitiesInRadius{r=8}
+    - potion{type=WEAKNESS;duration=60;level=1} @EntitiesInRadius{r=8}
+    - effect:particles{p=sweep_attack;a=10;s=0.5;y=1} @self
+    - sound{s=entity.ender_dragon.growl;v=1;p=1.5} @self
 
 BEAR_HIBERNATION:
   Skills:
-  - heal{amount=10} @self
-  - potion{type=REGENERATION;duration=100;level=1} @self
-  - effect:particles{p=heart;a=5;s=0.5;y=1} @self
+    - heal{amount=10} @self
+    - potion{type=REGENERATION;duration=100;level=1} @self
+    - effect:particles{p=heart;a=5;s=0.5;y=1} @self
 
 BEAR_MAUL:
   Skills:
-  - damage{amount=12;ignorearmor=true} @Target
-  - throw{velocity=0.5;y=0.5} @Target
-  - sound{s=entity.polar_bear.warning;v=1;p=1} @self
+    - damage{amount=12;ignorearmor=true} @Target
+    - throw{velocity=0.5;y=0.5} @Target
+    - sound{s=entity.polar_bear.warning;v=1;p=1} @self
 
 PANDA_EAT:
   Skills:
-  - heal{amount=5} @self
-  - potion{type=SATURATION;duration=20;level=1} @self
-  - effect:particles{p=composter;a=10;s=0.5;y=1} @self
-  - sound{s=entity.panda.eat;v=1;p=1} @self
+    - heal{amount=5} @self
+    - potion{type=SATURATION;duration=20;level=1} @self
+    - effect:particles{p=composter;a=10;s=0.5;y=1} @self
+    - sound{s=entity.panda.eat;v=1;p=1} @self
 
 PANDA_ROLL:
   Skills:
-  - leap{velocity=1} @Forward{f=5}
-  - damage{amount=8} @EntitiesInRadius{r=3}
-  - effect:particles{p=cloud;a=20;s=0.5;y=0.5} @self
+    - leap{velocity=1} @Forward{f=5}
+    - damage{amount=8} @EntitiesInRadius{r=3}
+    - effect:particles{p=cloud;a=20;s=0.5;y=0.5} @self
 
 EAGLE_EYE:
   Skills:
-  - potion{type=NIGHT_VISION;duration=200;level=1} @self
-  - potion{type=GLOWING;duration=100;level=1} @EntitiesInRadius{r=20}
-  - sound{s=entity.phantom.ambient;v=1;p=2} @self
+    - potion{type=NIGHT_VISION;duration=200;level=1} @self
+    - potion{type=GLOWING;duration=100;level=1} @EntitiesInRadius{r=20}
+    - sound{s=entity.phantom.ambient;v=1;p=2} @self
 
 EAGLE_DIVE:
   Skills:
-  - leap{velocity=2} @TargetLocation
-  - effect:particles{p=sweep_attack;a=15;s=0.5;y=1} @self
-  - damage{amount=15} @EntitiesInRadius{r=4}
+    - leap{velocity=2} @TargetLocation
+    - effect:particles{p=sweep_attack;a=15;s=0.5;y=1} @self
+    - damage{amount=15} @EntitiesInRadius{r=4}
 
 UNICORN_AURA:
   Skills:
-  - potion{type=LUCK;duration=300;level=1} @self
-  - potion{type=SPEED;duration=300;level=1} @self
-  - effect:particles{p=end_rod;a=20;s=0.5;y=1} @self
+    - potion{type=LUCK;duration=300;level=1} @self
+    - potion{type=SPEED;duration=300;level=1} @self
+    - effect:particles{p=end_rod;a=20;s=0.5;y=1} @self
 
 UNICORN_PIERCE:
   Skills:
-  - damage{amount=20;ignorearmor=true} @Target
-  - effect:particles{p=magic_crit;a=30;s=0.5;y=1} @Target
-  - sound{s=entity.horse.ambient;v=1;p=2} @self
+    - damage{amount=20;ignorearmor=true} @Target
+    - effect:particles{p=magic_crit;a=30;s=0.5;y=1} @Target
+    - sound{s=entity.horse.ambient;v=1;p=2} @self
 
 SLOTH_HEAL:
   Skills:
-  - heal{amount=4} @self
-  - effect:particles{p=heart;a=3;s=0.5;y=1} @self
-  - sound{s=entity.bat.ambient;v=0.5;p=0.5} @self
+    - heal{amount=4} @self
+    - effect:particles{p=heart;a=3;s=0.5;y=1} @self
+    - sound{s=entity.bat.ambient;v=0.5;p=0.5} @self
 
 SLOTH_YAWN:
   Skills:
-  - potion{type=SLOW;duration=100;level=3} @EntitiesInRadius{r=8}
-  - potion{type=SLOW_DIGGING;duration=100;level=2} @EntitiesInRadius{r=8}
-  - effect:particles{p=smoke_large;a=20;s=0.5;y=1} @self
-  - sound{s=entity.ghast.ambient;v=1;p=0.5} @self
+    - potion{type=SLOW;duration=100;level=3} @EntitiesInRadius{r=8}
+    - potion{type=SLOW_DIGGING;duration=100;level=2} @EntitiesInRadius{r=8}
+    - effect:particles{p=smoke_large;a=20;s=0.5;y=1} @self
+    - sound{s=entity.ghast.ambient;v=1;p=0.5} @self
 
 FROG_JUMP:
   Skills:
-  - potion{type=JUMP;duration=60;level=2} @self
-  - effect:particles{p=slime;a=10;s=0.5;y=0.5} @self
-  - sound{s=entity.frog.ambient;v=1;p=1} @self
+    - potion{type=JUMP;duration=60;level=2} @self
+    - effect:particles{p=slime;a=10;s=0.5;y=0.5} @self
+    - sound{s=entity.frog.ambient;v=1;p=1} @self
 
 FROG_SWIM:
   Skills:
-  - potion{type=DOLPHINS_GRACE;duration=100;level=1} @self
-  - effect:particles{p=water_bubble;a=20;s=0.5;y=1} @self
+    - potion{type=DOLPHINS_GRACE;duration=100;level=1} @self
+    - effect:particles{p=water_bubble;a=20;s=0.5;y=1} @self
 
 FOX_HEAL:
   Skills:
-  - heal{amount=3} @self
-  - potion{type=FAST_DIGGING;duration=60;level=1} @self
-  - sound{s=entity.fox.eat;v=1;p=1} @self
+    - heal{amount=3} @self
+    - potion{type=FAST_DIGGING;duration=60;level=1} @self
+    - sound{s=entity.fox.eat;v=1;p=1} @self
 
 FOX_DASH:
   Skills:
-  - potion{type=SPEED;duration=40;level=2} @self
-  - effect:particles{p=cloud;a=10;s=0.2;y=0.5} @self
+    - potion{type=SPEED;duration=40;level=2} @self
+    - effect:particles{p=cloud;a=10;s=0.2;y=0.5} @self
 
 PARROT_MIMIC:
   Skills:
-  - sound{s=entity.parrot.ambient;v=1;p=1} @self
-  - effect:particles{p=note;a=3;s=0.5;y=1} @self
+    - sound{s=entity.parrot.ambient;v=1;p=1} @self
+    - effect:particles{p=note;a=3;s=0.5;y=1} @self
 
 PARROT_FLY:
   Skills:
-  - potion{type=SLOW_FALLING;duration=100;level=1} @self
-  - effect:particles{p=fireworks_spark;a=10;s=0.5;y=1} @self
+    - potion{type=SLOW_FALLING;duration=100;level=1} @self
+    - effect:particles{p=fireworks_spark;a=10;s=0.5;y=1} @self
 
 PARROT_SCREECH:
   Skills:
-  - damage{amount=5} @EntitiesInRadius{r=6}
-  - potion{type=CONFUSION;duration=100;level=1} @EntitiesInRadius{r=6}
-  - sound{s=entity.parrot.imitate.creeper;v=1;p=1} @self
+    - damage{amount=5} @EntitiesInRadius{r=6}
+    - potion{type=CONFUSION;duration=100;level=1} @EntitiesInRadius{r=6}
+    - sound{s=entity.parrot.imitate.creeper;v=1;p=1} @self

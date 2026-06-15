@@ -1,7 +1,6 @@
 package net.danh.sincePet.pets;
 
 import io.lumine.mythic.bukkit.MythicBukkit;
-import io.lumine.mythic.core.skills.SkillMetadataImpl;
 import net.danh.sincePet.SincePet;
 import net.danh.sincePet.utils.ColorUtils;
 import org.bukkit.Bukkit;
@@ -10,7 +9,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -64,7 +62,7 @@ public class PetAbilityManager {
         String normalizedTrigger = trigger.toUpperCase();
         // Trace log to ensure trigger is firing
         if (normalizedTrigger.equals("RIGHT_CLICK_AIR") || normalizedTrigger.equals("SNEAK")) {
-             debug("[DEBUG] Trace: Trigger '" + normalizedTrigger + "' received for pet " + data.id());
+            debug("[DEBUG] Trace: Trigger '" + normalizedTrigger + "' received for pet " + data.id());
         }
         for (PetSkill ability : data.skills()) {
             if (!ability.matchesTrigger(normalizedTrigger) || ability.skillId().isBlank()) continue;
@@ -105,7 +103,7 @@ public class PetAbilityManager {
                 .filter(ability -> !ability.skillId().isBlank())
                 .filter(ability -> ability.matchesTrigger(trigger))
                 .toList();
-                
+
         if (activeAbilities.isEmpty()) {
             if (notify) p.sendMessage(getComp("pet.command.skill_none"));
             return false;
@@ -135,7 +133,8 @@ public class PetAbilityManager {
         if (!canUse(p, data, selected, notify)) return false;
         execute(p, findTarget(p), trigger, selected.skillId());
         markUsed(p, data, selected);
-        if (notify) p.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.skill_cast").replace("<skill>", selected.id())));
+        if (notify)
+            p.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.skill_cast").replace("<skill>", selected.id())));
         return true;
     }
 
@@ -201,7 +200,7 @@ public class PetAbilityManager {
             debug(" 📍 Origin Location: " + (petEntity != null ? "Pet's Location" : "Player's Location") + " [X:" + originLoc.getBlockX() + ", Y:" + originLoc.getBlockY() + ", Z:" + originLoc.getBlockZ() + "]");
 
             boolean success = MythicBukkit.inst().getAPIHelper().castSkill(p, skillId, triggerEntity, originLoc, List.of(triggerEntity), null, 1.0f);
-            
+
             if (success) {
                 debug(" ✅ RESULT: SUCCESS (MythicMobs casted the skill)");
             } else {

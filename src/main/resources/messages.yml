@@ -38,6 +38,9 @@ pet:
     player_not_found: "&cPlayer not found!"
     pet_not_found: "&cPet ID '<pet>' does not exist in the configuration!"
 
+  mmocore:
+    wrong_class: "<red>Your class cannot use this pet!"
+
   level:
     xp_actionbar: "&a+<amount> XP &8(&7<current_xp>/<max_xp>&8)"
     max_level_actionbar: "&6&lMAX LEVEL"
