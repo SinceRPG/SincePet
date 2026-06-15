@@ -1,9 +1,16 @@
 id: FROG
 name: "&2Swamp Frog"
 texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZGZjNTFhMzFjNWY4OWIyYTEyN2JiZDhjZGRhNmM2NTE4NjdmNzNlZjg2NTUyNmI0MmRmYTg0NTYzYzNjMDJiNiJ9fX0="
-stat: "MAGIC_DAMAGE"
-formula: "5 + (level * 1.5)"
+stats:
+  MAGIC_DAMAGE:
+    base: 0.0
+    max-value: 100.0
+    formula: "5 + (level * 1.5)"
 max_xp_formula: "100 + (level * 50)"
+upgrading_points:
+  levels_per_point: 5
+  points_per_interval: 1
+  max_points: 24
 attack:
   range: 5.0
   cooldown: 1.0

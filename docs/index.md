@@ -28,6 +28,7 @@ Installation if this is a new setup, or jump straight to GUI and Upgrades if you
 | [Upgrade System](upgrades.md)                       | Upgrade levels, PAPI checks, friendly requirement display, and commands.        |
 | [GUI Configuration](gui.md)                         | Item meta, pet display values, placeholders, and per-pet/per-upgrade overrides. |
 | [GUI Reference](gui-reference.md)                   | Placeholder lists and bundled default mappings for GUI configuration.           |
+| [Pet Experience GUI](pet_experience_gui.md)         | Using MMOItems to feed pets for experience points or levels via the Detail GUI. |
 | [Display Conditions](display-conditions.md)         | GUI condition syntax like `active_pet`, `rideable`, and permissions.            |
 | [Troubleshooting](troubleshooting.md)               | Common visual, config, and PlaceholderAPI problems.                             |
 

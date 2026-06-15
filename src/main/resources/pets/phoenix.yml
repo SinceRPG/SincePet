@@ -1,9 +1,16 @@
 id: PHOENIX
 name: "&cPhoenix Ember"
 texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTc5OThmY2ViZjM0ODg5NDMzZTI2OTU4ZWRiY2NlOWUyZTVkYmM4ZTZmNzU4NTg5OTVhYzg3NzQ3Mjg5In19fQ=="
-stat: "MAGIC_DAMAGE"
-formula: "3 + (level * 0.8) + (pow(level, 2) * 0.015)"
+stats:
+  MAGIC_DAMAGE:
+    base: 0.0
+    max-value: 100.0
+    formula: "3 + (level * 0.8) + (pow(level, 2) * 0.015)"
 max_xp_formula: "150 + (level * 75)"
+upgrading_points:
+  levels_per_point: 5
+  points_per_interval: 1
+  max_points: 24
 attack:
   range: 5.5
   cooldown: 1.2
@@ -19,15 +26,17 @@ upgrades:
     material: "FIRE_CHARGE"
     slot: 10
     max_level: 10
-    stat_bonus_formula: "1.2 * <upgrade_level>"
+    stats:
+      MAGIC_DAMAGE:
+        base: 0.0
+        max-value: 10.0
+        formula: "1.2 * <upgrade_level>"
     damage_bonus_formula: "4 * <upgrade_level>"
     requirement:
-      papi: "%playerpoints_points%"
+      upgrading_points: "<current.pet.upgrading.points>"
       compare: ">="
-      value: "20"
-      display: "You need 20 points"
-    commands:
-      - "points take <player> 20"
+      value: "1"
+      display: "You need 1 Upgrade Point"
 abilities:
   passive:
     rebirth:

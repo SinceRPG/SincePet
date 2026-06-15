@@ -1,6 +1,7 @@
 package net.danh.sincePet.pets;
 
 import net.danh.sincePet.SincePet;
+import net.danh.sincePet.data.PlayerDataHandler;
 import net.danh.sincePet.utils.ColorUtils;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -67,6 +68,17 @@ public class PetListener implements Listener {
                     if (!gui.isActionVisible(p, "detail.buttons.upgrades")) return;
                     new PetGUI(plugin, 1, PetGUI.View.UPGRADES).open(p);
                     return;
+                }
+
+                org.bukkit.configuration.ConfigurationSection expSection = guiConfig.getConfig().getConfigurationSection("pet-experience");
+                if (expSection != null) {
+                    for (String key : expSection.getKeys(false)) {
+                        int expSlot = expSection.getInt(key + ".slot", -1);
+                        if (slot == expSlot) {
+                            handleExpItemConsume(p, guiConfig, key);
+                            return;
+                        }
+                    }
                 }
                 return;
             }
@@ -177,5 +189,134 @@ public class PetListener implements Listener {
             e.setCancelled(true);
             plugin.getPetManager().ridePet(e.getPlayer());
         }
+    }
+
+    private void handleExpItemConsume(Player p, net.danh.sincePet.utils.ConfigUtils guiConfig, String key) {
+        String path = "pet-experience." + key;
+        String mmoitemId = guiConfig.getString(path + ".consumable-item.id", "");
+        String mmoitemType = guiConfig.getString(path + ".consumable-item.type", "");
+        int quantity = guiConfig.getInt(path + ".quantity", 1);
+
+        if (guiConfig.getConfig().isConfigurationSection(path + ".consumable-item")) {
+            mmoitemId = guiConfig.getString(path + ".consumable-item.id", "");
+            mmoitemType = guiConfig.getString(path + ".consumable-item.type", "");
+            quantity = guiConfig.getInt(path + ".consumable-item.quantity", 1);
+        } else if (guiConfig.getConfig().isList(path + ".consumable-item")) {
+            java.util.List<String> list = guiConfig.getConfig().getStringList(path + ".consumable-item");
+            if (!list.isEmpty()) mmoitemId = list.get(0);
+        }
+
+        double expPoints = guiConfig.getDouble(path + ".exp-points", 0);
+        int expLevel = guiConfig.getInt(path + ".exp-level", 0);
+
+        if (mmoitemId.isBlank()) return;
+
+        PetData active = plugin.getPetManager().getActivePetData(p);
+        if (active == null) return;
+        
+        PlayerDataHandler.PlayerSession s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        if (s == null) return;
+
+        int currentLv = s.getLevel(active.id());
+        int max = s.getMaxPetLevel(active.id());
+        if (currentLv >= max) {
+            p.sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.experience.max_level")));
+            return;
+        }
+
+        org.bukkit.inventory.ItemStack cursor = p.getItemOnCursor();
+        if (cursor == null || cursor.getType().isAir()) {
+            int found = 0;
+            for (org.bukkit.inventory.ItemStack item : p.getInventory().getContents()) {
+                if (item == null || item.getType().isAir()) continue;
+                io.lumine.mythic.lib.api.item.NBTItem nbt = io.lumine.mythic.lib.api.item.NBTItem.get(item);
+                boolean matchType = mmoitemType.isBlank() || mmoitemType.equalsIgnoreCase(nbt.getString("MMOITEMS_ITEM_TYPE"));
+                if (nbt.hasType() && mmoitemId.equalsIgnoreCase(nbt.getString("MMOITEMS_ITEM_ID")) && matchType) {
+                    found += item.getAmount();
+                }
+            }
+            if (found < quantity) {
+                String itemName = getMMOItemName(mmoitemType, mmoitemId);
+                p.sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.experience.not_enough_inventory").replace("{item_name}", itemName)));
+                return;
+            }
+            int remaining = quantity;
+            for (int i = 0; i < p.getInventory().getSize(); i++) {
+                org.bukkit.inventory.ItemStack item = p.getInventory().getItem(i);
+                if (item == null || item.getType().isAir()) continue;
+                io.lumine.mythic.lib.api.item.NBTItem nbt = io.lumine.mythic.lib.api.item.NBTItem.get(item);
+                boolean matchType = mmoitemType.isBlank() || mmoitemType.equalsIgnoreCase(nbt.getString("MMOITEMS_ITEM_TYPE"));
+                if (nbt.hasType() && mmoitemId.equalsIgnoreCase(nbt.getString("MMOITEMS_ITEM_ID")) && matchType) {
+                    if (item.getAmount() <= remaining) {
+                        remaining -= item.getAmount();
+                        p.getInventory().setItem(i, null);
+                    } else {
+                        item.setAmount(item.getAmount() - remaining);
+                        remaining = 0;
+                    }
+                    if (remaining <= 0) break;
+                }
+            }
+        } else {
+            io.lumine.mythic.lib.api.item.NBTItem nbt = io.lumine.mythic.lib.api.item.NBTItem.get(cursor);
+            boolean matchType = mmoitemType.isBlank() || mmoitemType.equalsIgnoreCase(nbt.getString("MMOITEMS_ITEM_TYPE"));
+            if (!nbt.hasType() || !mmoitemId.equalsIgnoreCase(nbt.getString("MMOITEMS_ITEM_ID")) || !matchType) {
+                String itemName = getMMOItemName(mmoitemType, mmoitemId);
+                p.sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.experience.wrong_item_cursor").replace("{item_name}", itemName)));
+                return;
+            }
+            if (cursor.getAmount() < quantity) {
+                p.sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.experience.not_enough_cursor")));
+                return;
+            }
+            cursor.setAmount(cursor.getAmount() - quantity);
+        }
+
+        boolean updated = false;
+        if (expLevel > 0) {
+            for (int i = 0; i < expLevel; i++) {
+                if (s.getLevel(active.id()) < max) {
+                    plugin.getPetManager().levelUp(p, p);
+                }
+            }
+            updated = true;
+        }
+        if (expPoints > 0) {
+            double currentXp = s.getXp(active.id());
+            s.setXp(active.id(), currentXp + expPoints);
+            updated = true;
+            
+            int loopLv = s.getLevel(active.id());
+            while (loopLv < max) {
+                double required = 0;
+                try {
+                    required = Double.parseDouble(net.danh.sincePet.utils.Calculator.calculator(active.maxXpFormula().replaceAll("(?i)<?\\blevel\\b>?", String.valueOf(loopLv)), 2));
+                } catch (Exception ignored) {}
+                if (required <= 0 || s.getXp(active.id()) < required) break;
+                
+                s.setXp(active.id(), s.getXp(active.id()) - required);
+                plugin.getPetManager().levelUp(p, p);
+                loopLv = s.getLevel(active.id());
+            }
+        }
+
+        if (updated) {
+            p.sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.experience.success")));
+            new PetGUI(plugin, 1, PetGUI.View.DETAIL).open(p);
+        }
+    }
+
+    private String getMMOItemName(String type, String id) {
+        try {
+            net.Indyuce.mmoitems.api.Type mmoType = net.Indyuce.mmoitems.MMOItems.plugin.getTypes().get(type.toUpperCase(java.util.Locale.ROOT));
+            if (mmoType != null) {
+                org.bukkit.inventory.ItemStack itemStack = net.Indyuce.mmoitems.MMOItems.plugin.getItem(mmoType, id);
+                if (itemStack != null && itemStack.hasItemMeta() && itemStack.getItemMeta().hasDisplayName()) {
+                    String name = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().serialize(itemStack.getItemMeta().displayName());
+                    return name + "<reset>";
+                }
+            }
+        } catch (Exception ignored) {}
+        return (type.isEmpty() ? "" : type + ":") + id;
     }
 }

@@ -3,6 +3,7 @@ package net.danh.sincePet.pets;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.danh.sincePet.SincePet;
+import net.danh.sincePet.data.PlayerDataHandler;
 import net.danh.sincePet.utils.Calculator;
 import net.danh.sincePet.utils.ColorUtils;
 import net.danh.sincePet.utils.ConfigUtils;
@@ -26,6 +27,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+/**
+ * PetGUI handles all the interactive inventory menus for SincePet.
+ * This class uses standard Bukkit Inventory APIs to display the main collection,
+ * pet detail screens, upgrades, and pet settings.
+ */
 public class PetGUI implements InventoryHolder {
     private static final int INVENTORY_SIZE = 54;
     private static final int ITEMS_PER_PAGE = 45;
@@ -51,6 +57,12 @@ public class PetGUI implements InventoryHolder {
         return view;
     }
 
+    /**
+     * Opens the designated GUI view for the specified player.
+     * Routes to the correct method based on the current View state.
+     *
+     * @param p The player opening the GUI.
+     */
     public void open(Player p) {
         if (view == View.DETAIL) {
             openDetail(p);
@@ -78,17 +90,51 @@ public class PetGUI implements InventoryHolder {
         p.openInventory(inv);
     }
 
+    /**
+     * Opens the detailed view for the player's currently active pet.
+     * Displays current experience, stats, and provides options to mount or open settings/upgrades.
+     *
+     * @param p The player.
+     */
     private void openDetail(Player p) {
         ConfigUtils gui = plugin.getPetGuiFile();
         ConfigUtils messages = plugin.getPetMessagesFile();
         PetData data = plugin.getPetManager().getActivePetData(p);
         String petName = data == null ? messages.getString("pet.gui.no_active_pet", "No Active Pet") : data.name();
+        
+        double currentXp = 0;
+        double maxReq = 0;
+        if (data != null) {
+            PlayerDataHandler.PlayerSession session = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+            if (session != null) {
+                currentXp = session.getXp(data.id());
+                int level = session.getLevel(data.id());
+                try {
+                    maxReq = Double.parseDouble(Calculator.calculator(data.maxXpFormula().replaceAll("(?i)<?\\blevel\\b>?", String.valueOf(level)), 2));
+                } catch (Exception ignored) {}
+            }
+        }
+        Placeholder expPl = new Placeholder("<current_exp>", formatNumber(currentXp));
+        Placeholder maxExpPl = new Placeholder("<max_exp>", formatNumber(maxReq));
+
         this.inv = Bukkit.createInventory(this, 27, ColorUtils.parse(messages.getString("pet.gui.detail_title", "<black><bold>Pet Detail: <name>").replace("<name>", petName)));
         fill(p, inv, gui);
         setButton(p, gui, "detail.buttons.back", 18, inv);
         setButton(p, gui, "detail.buttons.ride", 11, inv);
         setButton(p, gui, "detail.buttons.settings", 13, inv);
         setButton(p, gui, "detail.buttons.upgrades", 15, inv);
+
+        org.bukkit.configuration.ConfigurationSection expSection = gui.getConfig().getConfigurationSection("pet-experience");
+        if (expSection != null) {
+            for (String key : expSection.getKeys(false)) {
+                String path = "pet-experience." + key;
+                int slot = expSection.getInt(key + ".slot", -1);
+                if (slot >= 0 && slot < inv.getSize()) {
+                    inv.setItem(slot, createConfiguredItem(p, gui, path, Material.EXPERIENCE_BOTTLE, "XP", List.of(), expPl, maxExpPl));
+                }
+            }
+        }
+
         p.openInventory(inv);
     }
 
@@ -144,36 +190,68 @@ public class PetGUI implements InventoryHolder {
         for (int i = startIndex; i < endIndex; i++) {
             PetData data = viewablePets.get(i);
             int level = plugin.getPetManager().getPetLevel(p, data.id());
-            inv.setItem(slot++, createPetIcon(gui, messages, data, level));
+            inv.setItem(slot++, createPetIcon(p, gui, messages, data, level));
         }
     }
 
-    private ItemStack createPetIcon(ConfigUtils gui, ConfigUtils messages, PetData data, int level) {
-        double buffValue = 0;
-        try {
-            String formula = data.formula().replace("<level>", String.valueOf(level));
-            buffValue = Double.parseDouble(Calculator.calculator(formula, 2));
-        } catch (NumberFormatException ignored) {
+    /**
+     * Constructs the visual ItemStack for a pet in the main collection menu.
+     * Applies dynamic placeholders such as current level, stats from the new Map structure,
+     * and custom item textures.
+     *
+     * @param p        The player.
+     * @param gui      GUI configuration.
+     * @param messages Messages configuration.
+     * @param data     The pet data to format.
+     * @param level    The pet's current level.
+     * @return Formatted ItemStack representing the pet.
+     */
+    private ItemStack createPetIcon(Player p, ConfigUtils gui, ConfigUtils messages, PetData data, int level) {
+        List<String> statsLore = new ArrayList<>();
+        String statFormat = gui.getString("collection.pet_item.stats_format", " <gray>Stat Bonus: <green>+<value> <stat>");
+        for (Map.Entry<String, PetData.PetStatData> entry : data.stats().entrySet()) {
+            double statVal = entry.getValue().base();
+            try {
+                statVal += Double.parseDouble(Calculator.calculator(entry.getValue().formula().replaceAll("(?i)<?\\blevel\\b>?", String.valueOf(level)), 2));
+            } catch (Exception ignored) {}
+            if (entry.getValue().maxValue() != null && statVal > entry.getValue().maxValue()) {
+                statVal = entry.getValue().maxValue();
+            }
+            String valDisplay = (statVal % 1 == 0) ? String.valueOf((int) statVal) : String.format("%.2f", statVal);
+            statsLore.add(statFormat.replace("<stat>", getDisplayValue(gui, "stats", entry.getKey())).replace("<value>", valDisplay));
         }
+        String statsDisplay = statsLore.isEmpty() ? "" : String.join("\n", statsLore);
 
-        String buffDisplay = (buffValue % 1 == 0) ? String.valueOf((int) buffValue) : String.format("%.2f", buffValue);
         String inheritanceStr = String.valueOf((int) (data.inheritance() * 100));
         String statusLine = getConfigString(gui, messages, "collection.pet_item.status.unlocked", "pet.gui.status_unlocked", "<green>Unlocked");
         String itemPath = gui.getConfig().isConfigurationSection("collection.items." + data.id()) ? "collection.items." + data.id() : "collection.pet_item";
         Material fallbackMaterial = data.texture() == null || data.texture().isBlank() ? Material.PAPER : Material.PLAYER_HEAD;
         List<String> fallbackLore = messages.getStringList("pet.gui.item_lore");
+        
+        double currentXp = 0;
+        double maxReq = 0;
+        PlayerDataHandler.PlayerSession session = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        if (session != null) {
+            currentXp = session.getXp(data.id());
+            try {
+                maxReq = Double.parseDouble(Calculator.calculator(data.maxXpFormula().replaceAll("(?i)<?\\blevel\\b>?", String.valueOf(level)), 2));
+            } catch (Exception ignored) {}
+        }
+
         List<Placeholder> placeholdersList = new ArrayList<>(Arrays.asList(
                 new Placeholder("<pet>", data.name()),
                 new Placeholder("<name>", data.name()),
+                new Placeholder("<current_exp>", formatNumber(currentXp)),
+                new Placeholder("<max_exp>", formatNumber(maxReq)),
                 new Placeholder("<pet_display>", getDisplayValue(gui, "pets", data.id())),
                 new Placeholder("<pet_id_display>", getDisplayValue(gui, "pets", data.id())),
                 new Placeholder("<id>", data.id()),
                 new Placeholder("<pet_id>", data.id()),
                 new Placeholder("<level>", String.valueOf(level)),
-                new Placeholder("<stat>", getDisplayValue(gui, "stats", data.stat())),
-                new Placeholder("<value>", buffDisplay),
-                new Placeholder("<stat_bonus>", buffDisplay),
-                new Placeholder("<formula>", data.formula()),
+                new Placeholder("<upgrading_points>", String.valueOf(plugin.getPetManager().getAvailableUpgradePoints(p, data))),
+                new Placeholder("<max_upgrading_points>", String.valueOf(plugin.getPetManager().getTotalEarnedUpgradePoints(p, data))),
+                new Placeholder("<stats>", statsDisplay),
+                new Placeholder("<formula>", ""), // Kept for backwards compat but empty
                 new Placeholder("<inheritance>", inheritanceStr),
                 new Placeholder("<skills>", getSkillSummary(gui, data, "all")),
                 new Placeholder("<active_skills>", getSkillSummary(gui, data, "active")),
@@ -205,30 +283,60 @@ public class PetGUI implements InventoryHolder {
         inv.setItem(slot, item);
     }
 
+    /**
+     * Constructs the upgrade icon based on the player's current upgrade level.
+     * It checks if the upgrade is available, locked due to requirements, or maxed.
+     *
+     * @param p       The player viewing the upgrade.
+     * @param gui     GUI configuration.
+     * @param data    The pet data being upgraded.
+     * @param upgrade The specific upgrade node.
+     * @param level   The current upgrade level for this node.
+     * @return Formatted ItemStack for the upgrade menu.
+     */
     private ItemStack createUpgradeIcon(Player p, ConfigUtils gui, PetData data, PetUpgrade upgrade, int level) {
         boolean maxed = level >= upgrade.maxLevel();
-        boolean requirementMet = plugin.getPetManager().checkUpgradeRequirement(p, upgrade);
+        boolean requirementMet = plugin.getPetManager().checkUpgradeRequirement(p, data, upgrade);
         String state = maxed ? "maxed" : requirementMet ? "available" : "locked";
         String overridePath = "upgrade_items.items." + upgrade.id();
         String path = gui.getConfig().isConfigurationSection(overridePath) ? overridePath : "upgrade_items." + state;
         int nextLevel = Math.min(level + 1, upgrade.maxLevel());
+
+        List<String> statsLore = new ArrayList<>();
+        String statFormat = gui.getString(path + ".stats_format", "<gray><stat> Bonus: <green>+<stat_bonus> <dark_gray>-> <green>+<next_stat_bonus>");
+        for (String statKey : upgrade.stats().keySet()) {
+            double currentBonus = plugin.getPetManager().getUpgradeStatBonus(p, data, upgrade, level, statKey);
+            double nextBonus = plugin.getPetManager().getUpgradeStatBonus(p, data, upgrade, nextLevel, statKey);
+            
+            String currDisp = formatNumber(currentBonus);
+            String nextDisp = formatNumber(nextBonus);
+            
+            String statName = "LEGACY_ALL".equals(statKey) ? "All Stats" : getDisplayValue(gui, "stats", statKey);
+            statsLore.add(statFormat
+                .replace("<stat>", statName)
+                .replace("<stat_bonus>", currDisp)
+                .replace("<next_stat_bonus>", nextDisp));
+        }
+        String upgradeStatsDisplay = statsLore.isEmpty() ? "" : String.join("\n", statsLore);
+
         List<Placeholder> placeholdersList = new ArrayList<>(Arrays.asList(
                 new Placeholder("<pet>", data.name()),
                 new Placeholder("<pet_id>", data.id()),
                 new Placeholder("<upgrade>", upgrade.name()),
                 new Placeholder("<upgrade_id>", upgrade.id()),
+                new Placeholder("<upgrading_points>", String.valueOf(plugin.getPetManager().getAvailableUpgradePoints(p, data))),
+                new Placeholder("<max_upgrading_points>", String.valueOf(plugin.getPetManager().getTotalEarnedUpgradePoints(p, data))),
                 new Placeholder("<level>", String.valueOf(level)),
                 new Placeholder("<next_level>", String.valueOf(nextLevel)),
                 new Placeholder("<max_level>", String.valueOf(upgrade.maxLevel())),
                 new Placeholder("<papi>", upgrade.papi()),
                 new Placeholder("<compare>", upgrade.compare()),
                 new Placeholder("<value>", upgrade.value()),
-                new Placeholder("<current_value>", plugin.getPetManager().getResolvedUpgradeRequirement(p, upgrade)),
-                new Placeholder("<requirement>", getRequirementDisplay(p, upgrade)),
+                new Placeholder("<current_value>", plugin.getPetManager().getResolvedUpgradeRequirement(p, data, upgrade)),
+                new Placeholder("<requirement>", getRequirementDisplay(p, data, upgrade)),
                 new Placeholder("<raw_requirement>", upgrade.papi() + " " + upgrade.compare() + " " + upgrade.value()),
                 new Placeholder("<state>", state),
-                new Placeholder("<stat_bonus>", formatNumber(plugin.getPetManager().getUpgradeStatBonus(p, data, upgrade, level))),
-                new Placeholder("<next_stat_bonus>", formatNumber(plugin.getPetManager().getUpgradeStatBonus(p, data, upgrade, nextLevel))),
+                new Placeholder("<upgrade_stats>", upgradeStatsDisplay),
                 new Placeholder("<damage_bonus>", formatNumber(plugin.getPetManager().getUpgradeDamageBonus(p, data, upgrade, level))),
                 new Placeholder("<next_damage_bonus>", formatNumber(plugin.getPetManager().getUpgradeDamageBonus(p, data, upgrade, nextLevel))),
                 new Placeholder("<commands>", String.join(", ", upgrade.commands()))
@@ -507,14 +615,14 @@ public class PetGUI implements InventoryHolder {
         return fallbackConfig.getString(fallbackPath, fallbackValue);
     }
 
-    private String getRequirementDisplay(Player p, PetUpgrade upgrade) {
+    private String getRequirementDisplay(Player p, PetData data, PetUpgrade upgrade) {
         String display = upgrade.requirementDisplay();
         if (display == null || display.isBlank()) display = "<papi> <compare> <value>";
-        return plugin.getPetManager().resolvePlaceholders(p, display)
+        return plugin.getPetManager().resolvePlaceholders(p, data, display)
                 .replace("<papi>", upgrade.papi())
                 .replace("<compare>", upgrade.compare())
                 .replace("<value>", upgrade.value())
-                .replace("<current_value>", plugin.getPetManager().getResolvedUpgradeRequirement(p, upgrade));
+                .replace("<current_value>", plugin.getPetManager().getResolvedUpgradeRequirement(p, data, upgrade));
     }
 
     @Override

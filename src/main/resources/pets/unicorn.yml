@@ -1,9 +1,16 @@
 id: UNICORN
 name: "&dMystic Unicorn"
 texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTU1YmRlMjFlOWVjYWE5ZjllMzg2ZTlmNThmMDQwYTM4MGUwNjc3ZWVkNjM4MzNiODBhMzk4NWYzNDM3ZTc3ZiJ9fX0="
-stat: "MOVEMENT_SPEED"
-formula: "0.01 + (level * 0.002)"
+stats:
+  MOVEMENT_SPEED:
+    base: 0.0
+    max-value: 100.0
+    formula: "0.01 + (level * 0.002)"
 max_xp_formula: "180 + (level * 90)"
+upgrading_points:
+  levels_per_point: 5
+  points_per_interval: 1
+  max_points: 24
 attack:
   range: 4.0
   cooldown: 1.0
@@ -19,15 +26,17 @@ upgrades:
     material: "END_ROD"
     slot: 10
     max_level: 5
-    stat_bonus_formula: "0.005 * <upgrade_level>"
+    stats:
+      MOVEMENT_SPEED:
+        base: 0.0
+        max-value: 10.0
+        formula: "0.005 * <upgrade_level>"
     damage_bonus_formula: "1.5 * <upgrade_level>"
     requirement:
-      papi: "%playerpoints_points%"
+      upgrading_points: "<current.pet.upgrading.points>"
       compare: ">="
-      value: "25"
-      display: "You need 25 points"
-    commands:
-      - "points take <player> 25"
+      value: "1"
+      display: "You need 1 Upgrade Point"
 abilities:
   passive:
     magic_aura:

@@ -1,9 +1,16 @@
 id: BEAR
 name: "&8Grizzly Bear"
 texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDk0MDViYWNhZWE2YzFkOTViNTI0YzEyZjE2NGE3NThhNGE4ZGI3ZmUzNTgyZTgyYTk2OTRmYmM4Mzk5MTY5YSJ9fX0="
-stat: "MAX_HEALTH"
-formula: "10 + (level * 2)"
+stats:
+  MAX_HEALTH:
+    base: 0.0
+    max-value: 100.0
+    formula: "10 + (level * 2)"
 max_xp_formula: "140 + (level * 70)"
+upgrading_points:
+  levels_per_point: 5
+  points_per_interval: 1
+  max_points: 24
 mmocore_classes:
   - "WARRIOR"
   - "ROGUE"
@@ -22,15 +29,17 @@ upgrades:
     material: "LEATHER_CHESTPLATE"
     slot: 10
     max_level: 10
-    stat_bonus_formula: "3 * <upgrade_level>"
+    stats:
+      MAX_HEALTH:
+        base: 0.0
+        max-value: 10.0
+        formula: "3 * <upgrade_level>"
     damage_bonus_formula: "1 * <upgrade_level>"
     requirement:
-      papi: "%playerpoints_points%"
+      upgrading_points: "<current.pet.upgrading.points>"
       compare: ">="
-      value: "15"
-      display: "You need 15 points"
-    commands:
-      - "points take <player> 15"
+      value: "1"
+      display: "You need 1 Upgrade Point"
 abilities:
   passive:
     hibernation:

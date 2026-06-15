@@ -70,8 +70,28 @@ public class PetConfig {
     private void loadPet(String key, ConfigurationSection section, String path) {
         String name = section.getString(path + "name");
         String texture = section.getString(path + "texture");
-        String stat = section.getString(path + "stat");
-        String formula = section.getString(path + "formula");
+
+        Map<String, PetData.PetStatData> stats = new LinkedHashMap<>();
+        ConfigurationSection statsSection = section.getConfigurationSection(path + "stats");
+        if (statsSection != null) {
+            for (String statKey : statsSection.getKeys(false)) {
+                if (statsSection.isConfigurationSection(statKey)) {
+                    ConfigurationSection s = statsSection.getConfigurationSection(statKey);
+                    double base = s.getDouble("base", 0.0);
+                    Double max = s.contains("max-value") ? s.getDouble("max-value") : null;
+                    String f = s.getString("formula", "0");
+                    stats.put(statKey.toUpperCase(Locale.ROOT), new PetData.PetStatData(base, max, f));
+                } else {
+                    stats.put(statKey.toUpperCase(Locale.ROOT), new PetData.PetStatData(0.0, null, statsSection.getString(statKey)));
+                }
+            }
+        } else {
+            String stat = section.getString(path + "stat");
+            String formula = section.getString(path + "formula");
+            if (stat != null && formula != null) {
+                stats.put(stat.toUpperCase(Locale.ROOT), new PetData.PetStatData(0.0, null, formula));
+            }
+        }
 
         double range = section.getDouble(path + "attack.range", 0);
         double cooldown = section.getDouble(path + "attack.cooldown", 2.0);
@@ -85,7 +105,21 @@ public class PetConfig {
 
         List<PetSkill> loadedSkills = loadSkills(section, path);
         List<String> mmocoreClasses = section.getStringList(path + "mmocore_classes").stream().map(c -> c.toUpperCase(Locale.ROOT)).toList();
-        pets.put(key, new PetData(key, name, texture, stat, formula, range, cooldown, dmgFormula, inheritance, attackParticle, rideable, canFly, maxXpFormula, loadUpgrades(section.getConfigurationSection(path + "upgrades")), loadedSkills, mmocoreClasses));
+        
+        ConfigurationSection pointsSec = section.getConfigurationSection(path + "upgrading_points");
+        PetData.UpgradingPoints upgradingPoints;
+        if (pointsSec != null) {
+            upgradingPoints = new PetData.UpgradingPoints(
+                pointsSec.getInt("levels_per_point", 5),
+                pointsSec.getInt("points_per_interval", 1),
+                pointsSec.getInt("max_points", 24)
+            );
+        } else {
+            // Default if missing
+            upgradingPoints = new PetData.UpgradingPoints(5, 1, 24);
+        }
+
+        pets.put(key, new PetData(key, name, texture, stats, range, cooldown, dmgFormula, inheritance, attackParticle, rideable, canFly, maxXpFormula, loadUpgrades(section.getConfigurationSection(path + "upgrades")), loadedSkills, mmocoreClasses, upgradingPoints));
         debug("[DEBUG] Loaded pet '" + key + "' with " + loadedSkills.size() + " skills.");
     }
 
@@ -147,15 +181,38 @@ public class PetConfig {
         if (section == null) return upgrades;
         for (String key : section.getKeys(false)) {
             String path = key + ".";
+            
+            Map<String, PetData.PetStatData> stats = new LinkedHashMap<>();
+            ConfigurationSection statsSec = section.getConfigurationSection(path + "stats");
+            if (statsSec != null) {
+                for (String statKey : statsSec.getKeys(false)) {
+                    if (statsSec.isConfigurationSection(statKey)) {
+                        ConfigurationSection s = statsSec.getConfigurationSection(statKey);
+                        double base = s.getDouble("base", 0.0);
+                        Double max = s.contains("max-value") ? s.getDouble("max-value") : null;
+                        String f = s.getString("formula", "0");
+                        stats.put(statKey.toUpperCase(Locale.ROOT), new PetData.PetStatData(base, max, f));
+                    } else {
+                        stats.put(statKey.toUpperCase(Locale.ROOT), new PetData.PetStatData(0.0, null, statsSec.getString(statKey)));
+                    }
+                }
+            } else {
+                String legacyFormula = section.getString(path + "stat_bonus_formula");
+                if (legacyFormula != null) {
+                    stats.put("LEGACY_ALL", new PetData.PetStatData(0.0, null, legacyFormula));
+                }
+            }
+            
             upgrades.add(new PetUpgrade(
                     key,
                     section.getString(path + "name", key),
                     parseMaterial(section.getString(path + "material", "NETHER_STAR"), Material.NETHER_STAR),
                     section.getInt(path + "slot", upgrades.size()),
                     section.getInt(path + "max_level", 10),
-                    section.getString(path + "stat_bonus_formula", "0"),
+                    section.getInt(path + "cost", 1),
+                    stats,
                     section.getString(path + "damage_bonus_formula", "0"),
-                    section.getString(path + "requirement.papi", ""),
+                    section.getString(path + "requirement.papi", section.getString(path + "requirement.upgrading_points", "")),
                     section.getString(path + "requirement.compare", ">="),
                     section.getString(path + "requirement.value", "0"),
                     section.getString(path + "requirement.display", ""),

@@ -22,6 +22,7 @@ PAGES = [
     ("database.md", "Database"),
     ("worldguard.md", "WorldGuard"),
     ("mythicmobs.md", "MythicMobs"),
+    ("pet_experience_gui.md", "Pet Experience GUI"),
     ("troubleshooting.md", "Troubleshooting"),
 ]
 

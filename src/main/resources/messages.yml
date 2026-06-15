@@ -41,6 +41,13 @@ pet:
   mmocore:
     wrong_class: "<red>Your class cannot use this pet!"
 
+  experience:
+    max_level: "&cYour pet is already max level!"
+    not_enough_inventory: "&cYou don't have enough {item_name}&c in your inventory."
+    wrong_item_cursor: "&cYou must click with the correct item ({item_name}&c)!"
+    not_enough_cursor: "&cYou don't have enough quantity on your cursor!"
+    success: "&aSuccessfully added experience to your pet!"
+
   level:
     xp_actionbar: "&a+<amount> XP &8(&7<current_xp>/<max_xp>&8)"
     max_level_actionbar: "&6&lMAX LEVEL"
@@ -67,6 +74,7 @@ pet:
     item_lore:
       - ""
       - " <gray>Level: <white><level>"
+      - " <gray>EXP: <green><current_exp> / <max_exp>"
       - " <gray>Stat Bonus: <green>+<value> <stat>"
       - " <gray>DMG Inheritance: <green><inheritance>%"
       - " <gray>Passive Abilities:"

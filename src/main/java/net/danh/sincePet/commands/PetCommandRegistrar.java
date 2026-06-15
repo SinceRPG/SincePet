@@ -109,7 +109,7 @@ public class PetCommandRegistrar {
     private int setMaxLevel(String targetName, String petId, int newMax, org.bukkit.command.CommandSender sender) {
         var target = Bukkit.getPlayer(targetName);
         if (target == null) {
-            sender.sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.command.player_not_found", "&cPlayer not found!")));
+            sender.sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.command.player_not_found")));
             return 0;
         }
 
@@ -127,7 +127,7 @@ public class PetCommandRegistrar {
         }
 
         if (plugin.getPetManager().getPetConfig().getPet(petId) == null) {
-            sender.sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.command.pet_not_found", "&cPet ID not found!").replace("<pet>", petId)));
+            sender.sendMessage(ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.command.pet_not_found").replace("<pet>", petId)));
             return 0;
         }
 

@@ -10,6 +10,8 @@ This page contains reference lists for placeholders and bundled display mappings
 | `<id>` / `<pet_id>`                  | Pet ID from `pets/*.yml`.                                        |
 | `<pet_display>` / `<pet_id_display>` | Friendly pet name from `display_values.pets`.                    |
 | `<level>`                            | Player's current pet level.                                      |
+| `<upgrading_points>`                 | Available pet upgrading points.                                  |
+| `<max_upgrading_points>`             | Total pet upgrading points earned over all levels.               |
 | `<stat>`                             | Pet stat from config.                                            |
 | `<value>` / `<stat_bonus>`           | Current stat bonus from the pet formula.                         |
 | `<formula>`                          | Raw stat formula.                                                |
@@ -28,6 +30,8 @@ This page contains reference lists for placeholders and bundled display mappings
 | `<pet_id>`            | Pet ID from `pets.yml`.                               |
 | `<upgrade>`           | Upgrade display name.                                 |
 | `<upgrade_id>`        | Upgrade ID from `pets.yml`.                           |
+| `<upgrading_points>`  | Available pet upgrading points.                       |
+| `<max_upgrading_points>`| Total pet upgrading points earned over all levels.    |
 | `<level>`             | Current upgrade level.                                |
 | `<next_level>`        | Next upgrade level.                                   |
 | `<max_level>`         | Max upgrade level.                                    |

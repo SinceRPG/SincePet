@@ -20,9 +20,11 @@ import io.papermc.paper.entity.TeleportFlag;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import net.danh.sincePet.SincePet;
 import net.danh.sincePet.hooks.WorldGuardHook;
+import net.danh.sincePet.hooks.MMOCoreHook;
 import net.danh.sincePet.utils.Calculator;
 import net.danh.sincePet.utils.ColorUtils;
 import net.danh.sincePet.utils.SchedulerUtils;
+import java.util.Locale;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
@@ -39,7 +41,14 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Handles the core physical logic, generation, attacking mechanics, and stat assignments of Pets.
+ * PetManager is the core controller for the SincePet plugin.
+ * It manages:
+ * - Pet spawning, despawning, and active states.
+ * - Loading and caching configuration (PetConfig).
+ * - WorldGuard region checks and flags.
+ * - The procedural pet following physics engine.
+ * - Applying MythicLib stats dynamically.
+ * - Managing active and passive pet abilities via MythicMobs.
  */
 public class PetManager {
 
@@ -150,7 +159,14 @@ public class PetManager {
     }
 
     /**
-     * Summons the visual ItemDisplay entity representing the pet.
+     * Attempts to spawn the active pet for the given player.
+     * Triggers despawning of any existing pet first.
+     * Uses WorldGuard flags to check if spawning is permitted in the player's current location.
+     *
+     * @param p     The player summoning the pet.
+     * @param data  The PetData object defining the pet's attributes.
+     * @param level The pet's current level.
+     * @param msg   Whether to send status messages to the player.
      */
     public void spawnPet(Player p, PetData data, int level, boolean msg) {
         if (!checkFlag(p, WorldGuardHook.PET_SPAWN)) {
@@ -160,10 +176,9 @@ public class PetManager {
 
         if (data.mmocoreClasses() != null && !data.mmocoreClasses().isEmpty()) {
             if (plugin.getServer().getPluginManager().isPluginEnabled("MMOCore")) {
-                String playerClass = net.danh.sincePet.hooks.MMOCoreHook.getPlayerClass(p);
-                if (playerClass != null && !data.mmocoreClasses().contains(playerClass.toUpperCase(java.util.Locale.ROOT))) {
-                    if (msg)
-                        p.sendMessage(net.danh.sincePet.utils.ColorUtils.parseWithPrefix(plugin.getPetMessagesFile().getString("pet.mmocore.wrong_class", "&cYour class cannot use this pet!")));
+                String playerClass = MMOCoreHook.getPlayerClass(p);
+                if (playerClass != null && !data.mmocoreClasses().contains(playerClass.toUpperCase(Locale.ROOT))) {
+                    if (msg) p.sendMessage(getComp("pet.mmocore.wrong_class"));
                     return;
                 }
             }
@@ -206,7 +221,10 @@ public class PetManager {
     }
 
     /**
-     * Unregisters the visual components and stat modifiers associated with a pet.
+     * Completely removes the pet entity and its associated visual displays (like the name tag).
+     * Stops any running background tasks related to this specific pet.
+     *
+     * @param p The player whose pet should be removed.
      */
     public void removePetVisuals(Player p) {
         var id = p.getUniqueId();
@@ -356,18 +374,29 @@ public class PetManager {
         return s == null ? 0 : s.getUpgradeLevel(data.id(), upgrade.id());
     }
 
-    public double getUpgradeStatBonus(Player p, PetData data, PetUpgrade upgrade, int upgradeLevel) {
-        return calculateUpgradeFormula(p, data, upgrade.statFormula(), upgradeLevel);
+    public double getUpgradeStatBonus(Player p, PetData data, PetUpgrade upgrade, int upgradeLevel, String statName) {
+        PetData.PetStatData statData = upgrade.stats().getOrDefault(statName, upgrade.stats().get("LEGACY_ALL"));
+        if (statData == null) return 0;
+        return statData.base() + calculateUpgradeFormula(p, data, statData.formula(), upgradeLevel);
     }
 
     public double getUpgradeDamageBonus(Player p, PetData data, PetUpgrade upgrade, int upgradeLevel) {
         return calculateUpgradeFormula(p, data, upgrade.damageFormula(), upgradeLevel);
     }
 
-    public String getResolvedUpgradeRequirement(Player p, PetUpgrade upgrade) {
-        return resolvePlaceholders(p, upgrade.papi());
+    public String getResolvedUpgradeRequirement(Player p, PetData data, PetUpgrade upgrade) {
+        return resolvePlaceholders(p, data, upgrade.papi());
     }
 
+    /**
+     * Upgrades the specified pet upgrade node for the player if requirements are met.
+     * Runs console commands upon success and updates the player's database record.
+     * Recalculates stats immediately.
+     *
+     * @param p       The player performing the upgrade.
+     * @param upgrade The specific PetUpgrade node.
+     * @return true if upgrade was successful, false otherwise.
+     */
     public boolean upgradePet(Player p, PetUpgrade upgrade) {
         PetData data = getActivePetData(p);
         var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
@@ -377,7 +406,7 @@ public class PetManager {
             p.sendMessage(getComp("pet.upgrade.maxed"));
             return false;
         }
-        if (!checkUpgradeRequirement(p, upgrade)) {
+        if (!checkUpgradeRequirement(p, data, upgrade)) {
             p.sendMessage(getComp("pet.upgrade.requirement_failed"));
             return false;
         }
@@ -752,28 +781,67 @@ public class PetManager {
         if (created != null) activePetNames.put(uuid, created);
     }
 
-    private double getUpgradeBonus(Player p, PetData data, String type) {
+    private double getUpgradeBonus(Player p, PetData data, String type, String statName) {
         var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
         if (s == null) return 0;
         double total = 0;
         for (PetUpgrade upgrade : data.upgrades()) {
             int level = s.getUpgradeLevel(data.id(), upgrade.id());
             if (level <= 0) continue;
-            String formula = "damage".equals(type) ? upgrade.damageFormula() : upgrade.statFormula();
+            String formula;
+            if ("damage".equals(type)) {
+                formula = upgrade.damageFormula();
+            } else {
+                PetData.PetStatData statData = upgrade.stats().getOrDefault(statName, upgrade.stats().get("LEGACY_ALL"));
+                if (statData != null) {
+                    total += statData.base();
+                    formula = statData.formula();
+                } else {
+                    formula = null;
+                }
+            }
+            if (formula == null || formula.isBlank()) continue;
             try {
                 total += Double.parseDouble(Calculator.calculator(formula
-                        .replace("<level>", String.valueOf(getPetLevel(p, data.id())))
-                        .replace("<upgrade_level>", String.valueOf(level)), 2));
+                        .replaceAll("(?i)<?\\blevel\\b>?", String.valueOf(getPetLevel(p, data.id())))
+                        .replaceAll("(?i)<?\\bupgrade_level\\b>?", String.valueOf(level)), 2));
             } catch (NumberFormatException ignored) {
             }
         }
         return total;
     }
 
-    public boolean checkUpgradeRequirement(Player p, PetUpgrade upgrade) {
+    public int getAvailableUpgradePoints(Player p, PetData data) {
+        int earned = getTotalEarnedUpgradePoints(p, data);
+        int used = getUsedUpgradePoints(p, data);
+        return Math.max(0, earned - used);
+    }
+
+    public int getTotalEarnedUpgradePoints(Player p, PetData data) {
+        int levelsPerPoint = data.upgradingPoints().levelsPerPoint();
+        int pointsPerInterval = data.upgradingPoints().pointsPerInterval();
+        int maxPoints = data.upgradingPoints().maxPoints();
+        
+        if (levelsPerPoint <= 0) return 0;
+        int level = getPetLevel(p, data.id());
+        int earned = (level / levelsPerPoint) * pointsPerInterval;
+        return Math.min(earned, maxPoints);
+    }
+
+    public int getUsedUpgradePoints(Player p, PetData data) {
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        if (s == null) return 0;
+        int used = 0;
+        for (PetUpgrade upgrade : data.upgrades()) {
+            used += s.getUpgradeLevel(data.id(), upgrade.id()) * upgrade.cost();
+        }
+        return used;
+    }
+
+    public boolean checkUpgradeRequirement(Player p, PetData data, PetUpgrade upgrade) {
         if (upgrade.papi() == null || upgrade.papi().isBlank()) return true;
-        String raw = resolvePlaceholders(p, upgrade.papi());
-        String expected = resolvePlaceholders(p, upgrade.value());
+        String raw = resolvePlaceholders(p, data, upgrade.papi());
+        String expected = resolvePlaceholders(p, data, upgrade.value());
         double left = parseDouble(raw);
         double right = parseDouble(expected);
         return switch (upgrade.compare()) {
@@ -786,8 +854,11 @@ public class PetManager {
         };
     }
 
-    public String resolvePlaceholders(Player p, String text) {
+    public String resolvePlaceholders(Player p, PetData data, String text) {
         if (text == null) return "";
+        if (data != null && text.contains("<current.pet.upgrading.points>")) {
+            text = text.replace("<current.pet.upgrading.points>", String.valueOf(getAvailableUpgradePoints(p, data)));
+        }
         if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) return text;
         try {
             Class<?> papi = Class.forName("me.clip.placeholderapi.PlaceholderAPI");
@@ -809,8 +880,8 @@ public class PetManager {
         if (formula == null || formula.isBlank()) return 0;
         try {
             return Double.parseDouble(Calculator.calculator(formula
-                    .replace("<level>", String.valueOf(getPetLevel(p, data.id())))
-                    .replace("<upgrade_level>", String.valueOf(upgradeLevel)), 2));
+                    .replaceAll("(?i)<?\\blevel\\b>?", String.valueOf(getPetLevel(p, data.id())))
+                    .replaceAll("(?i)<?\\bupgrade_level\\b>?", String.valueOf(upgradeLevel)), 2));
         } catch (NumberFormatException ignored) {
             return 0;
         }
@@ -820,7 +891,7 @@ public class PetManager {
         List<String> commands = upgrade.commands();
         if (commands == null || commands.isEmpty()) return;
         for (String command : commands) {
-            String parsed = resolvePlaceholders(p, command)
+            String parsed = resolvePlaceholders(p, data, command)
                     .replace("<player>", p.getName())
                     .replace("<uuid>", p.getUniqueId().toString())
                     .replace("<pet>", data.id())
@@ -854,11 +925,24 @@ public class PetManager {
             var k = "sincepet_bonus";
             if (add) {
                 int lv = getPetLevel(p, d.id());
-                double v = Double.parseDouble(Calculator.calculator(d.formula().replace("<level>", String.valueOf(lv)), 2)) + getUpgradeBonus(p, d, "stat");
-                new StatModifier(k, d.stat(), v, ModifierType.FLAT, EquipmentSlot.OTHER, ModifierSource.OTHER).register(pd);
+                for (Map.Entry<String, PetData.PetStatData> entry : d.stats().entrySet()) {
+                    String statName = entry.getKey();
+                    PetData.PetStatData statData = entry.getValue();
+                    double computed = Double.parseDouble(Calculator.calculator(statData.formula().replaceAll("(?i)<?\\blevel\\b>?", String.valueOf(lv)), 2));
+                    double totalV = statData.base() + computed + getUpgradeBonus(p, d, "stat", statName);
+                    if (statData.maxValue() != null && totalV > statData.maxValue()) {
+                        totalV = statData.maxValue();
+                    }
+                    new StatModifier(k + "_" + statName, statName, totalV, ModifierType.FLAT, EquipmentSlot.OTHER, ModifierSource.OTHER).register(pd);
+                }
             } else {
-                var i = pd.getStatMap().getInstance(d.stat());
-                if (i != null) i.removeIf(k::equals);
+                for (String statName : d.stats().keySet()) {
+                    var i = pd.getStatMap().getInstance(statName);
+                    if (i != null) {
+                        String modKey = k + "_" + statName;
+                        i.removeIf(modKey::equals);
+                    }
+                }
             }
         } catch (Exception ignored) {
         }
@@ -893,7 +977,7 @@ public class PetManager {
             var damager = StatProvider.get(p, EquipmentSlot.MAIN_HAND, true);
 
             int lv = getPetLevel(p, data.id());
-            double petBaseDmg = Double.parseDouble(Calculator.calculator(data.getDamageFormula().replace("<level>", String.valueOf(lv)), 2)) + getUpgradeBonus(p, data, "damage");
+            double petBaseDmg = Double.parseDouble(Calculator.calculator(data.getDamageFormula().replaceAll("(?i)<?\\blevel\\b>?", String.valueOf(lv)), 2)) + getUpgradeBonus(p, data, "damage", null);
             double playerPhysicalDmg = playerData.getStatMap().getInstance("ATTACK_DAMAGE").getTotal();
             double finalPhysicalDmg = petBaseDmg + (playerPhysicalDmg * data.inheritance());
 
@@ -1023,7 +1107,12 @@ public class PetManager {
     }
 
     /**
-     * Processes Experience Point injections modifying dynamic maximum level boundaries.
+     * Injects experience points into the player's currently active pet.
+     * Handles dynamic leveling and recalculates maximum experience limits for the next level.
+     * Sends action bar notifications for visual feedback.
+     *
+     * @param p      The player.
+     * @param amount The raw amount of experience to add.
      */
     public void addExp(Player p, double amount) {
         var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());

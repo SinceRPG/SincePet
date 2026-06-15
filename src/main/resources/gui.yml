@@ -17,7 +17,7 @@ collection:
     lore:
       - ""
       - " <gray>Level: <white><level>"
-      - " <gray>Stat Bonus: <green>+<value> <stat>"
+      - "<stats>"
       - " <gray>DMG Inheritance: <green><inheritance>%"
       - ""
       - " <gray>Passive Abilities:"
@@ -36,6 +36,7 @@ collection:
     status:
       unlocked: "<green>Unlocked"
       locked: "<red>Locked"
+    stats_format: " <gray>Stat Bonus: <green>+<value> <stat>"
     display_values:
       # These mappings change how raw config values appear in placeholders.
       # Example: <stat> uses display_values.stats.HEALTH instead of showing HEALTH.
@@ -261,13 +262,14 @@ upgrade_items:
     name: "<gold><upgrade>"
     glow: true
     hide_attributes: true
+    stats_format: "<gray><stat> Bonus: <green><stat_bonus> <dark_gray>-> <green><next_stat_bonus>"
     lore:
       - ""
       - "<gray>Level: <white><level>/<max_level> <dark_gray>(next <next_level>)"
       - "<gray><requirement>"
       - "<gray>Your value: <green><current_value>"
       - ""
-      - "<gray>Stat Bonus: <green><stat_bonus> <dark_gray>-> <green><next_stat_bonus>"
+      - "<upgrade_stats>"
       - "<gray>Damage Bonus: <red><damage_bonus> <dark_gray>-> <red><next_damage_bonus>"
       - ""
       - "<yellow>Click to upgrade!"
@@ -288,10 +290,11 @@ upgrade_items:
     name: "<green><upgrade>"
     glow: true
     hide_attributes: true
+    stats_format: "<gray><stat> Bonus: <green><stat_bonus> <dark_gray>-> <green><next_stat_bonus>"
     lore:
       - ""
       - "<gray>Level: <gold><level>/<max_level>"
-      - "<gray>Stat Bonus: <green><stat_bonus>"
+      - "<upgrade_stats>"
       - "<gray>Damage Bonus: <red><damage_bonus>"
       - ""
       - "<gold>MAXED"
@@ -304,3 +307,45 @@ upgrade_items:
   #     model_data: 1001
   #     lore:
   #       - "<gray>Level: <level>/<max_level>"
+
+pet-experience:
+  1: 
+    material: "EXPERIENCE_BOTTLE"
+    slot: 5
+    glow: true
+    item_flags:
+      - "HIDE_ENCHANTS"
+    name: "<green>Common Experience"
+    lore:
+      - "<gray>Feed your pet to gain"
+      - "<gray>200 experience points."
+      - ""
+      - "<gray>Current EXP: <green><current_exp> / <max_exp>"
+      - ""
+      - "<yellow>Click to use!"
+      - "<gray>(Requires 1 MMOItems)"
+    consumable-item:
+      type: "CONSUMABLE"
+      id: "CONSUMABLE_EXP_POTION_1"
+      quantity: 1
+    exp-points: 200
+  2: 
+    material: "EXPERIENCE_BOTTLE"
+    slot: 8
+    glow: true
+    item_flags:
+      - "HIDE_ENCHANTS"
+    name: "<gold>Rare Experience"
+    lore:
+      - "<gray>Feed your pet to level up"
+      - "<gray>2 times."
+      - ""
+      - "<gray>Current EXP: <green><current_exp> / <max_exp>"
+      - ""
+      - "<yellow>Click to use!"
+      - "<gray>(Requires 2 MMOItems)"
+    consumable-item:
+      type: "CONSUMABLE"
+      id: "RARE_EXP_CANDY"
+      quantity: 2
+    exp-level: 2

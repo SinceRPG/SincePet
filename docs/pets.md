@@ -20,8 +20,11 @@ pets:
 id: PHOENIX
 name: "&cPhoenix Ember"
 texture: "base64 texture"
-stat: "MAGIC_DAMAGE"
-formula: "3 + (level * 0.8)"
+stats:
+  MAGIC_DAMAGE:
+    base: 0.0
+    max-value: 100.0
+    formula: "3 + (level * 0.8)"
 max_xp_formula: "150 + (level * 75)"
 attack:
   range: 5.5
@@ -55,19 +58,34 @@ If the texture is empty, the GUI falls back to a paper item for collection icons
 ## Stat Bonus
 
 ```yaml
-stat: "MAGIC_DAMAGE"
-formula: "3 + (level * 0.8)"
+stats:
+  MAGIC_DAMAGE:
+    base: 0.0
+    max-value: 100.0
+    formula: "3 + (level * 0.8)"
+  MAX_HEALTH:
+    base: 10.0
+    max-value: 200.0
+    formula: "level * 2"
 ```
 
-`stat` must be a MythicLib stat name. `formula` calculates the flat stat value granted by the pet.
+`stats` is a map where the key is a MythicLib stat name. Each stat contains:
+- `base`: The flat base value.
+- `max-value`: (Optional) The maximum cap this stat can reach, even with upgrades. Omit or leave empty for no limit.
+- `formula`: The calculation formula based on pet level.
 
 The formula currently uses `level` as the variable. The Java code internally replaces `<level>` too, so both of these
 styles are accepted by the current calculator usage:
 
 ```yaml
-formula: "2 + (level * 1)"
-formula: "2 + (<level> * 1)"
+stats:
+  MAGIC_DAMAGE:
+    formula: "2 + (level * 1)"
+  MAX_HEALTH:
+    formula: "2 + (<level> * 1)"
 ```
+
+Note: The system still supports backwards compatibility if you write `MAGIC_DAMAGE: "2 + (level * 1)"` directly. However, using `base` and `max-value` offers more precise balancing.
 
 ## Class Restriction
 
@@ -88,6 +106,21 @@ max_xp_formula: "150 + (level * 75)"
 ```
 
 This controls the XP required for the next pet level.
+
+## Upgrading Points
+
+```yaml
+upgrading_points:
+  levels_per_point: 5       # Pet gains points every 5 levels
+  points_per_interval: 1    # Pet gains 1 point
+  max_points: 24            # Maximum points this pet can hold
+```
+
+This section is entirely optional and gives each pet an independent internal point system. 
+As pets level up, they automatically accumulate "Upgrading Points" based on this formula. 
+Players can spend these points on upgrades in the pet's skill tree without using PlaceholderAPI economies.
+
+If omitted, it defaults to `levels_per_point: 5`, `points_per_interval: 1`, `max_points: 24`.
 
 ## Attack
 
