@@ -58,6 +58,7 @@ collection:
       stats:
         HEALTH: "Health"
         MAX_HEALTH: "Max Health"
+        LEGACY_ALL: "All Stats"
         ATTACK_DAMAGE: "Attack Damage"
         CRITICAL_STRIKE_CHANCE: "Critical Strike Chance"
         CRITICAL_STRIKE_POWER: "Critical Strike Power"
@@ -262,7 +263,7 @@ upgrade_items:
     name: "<gold><upgrade>"
     glow: true
     hide_attributes: true
-    stats_format: "<gray><stat> Bonus: <green><stat_bonus> <dark_gray>-> <green><next_stat_bonus>"
+    stats_format: "<gray><stat> Bonus: <green>+<stat_bonus> <dark_gray>-> <green>+<next_stat_bonus>"
     lore:
       - ""
       - "<gray>Level: <white><level>/<max_level> <dark_gray>(next <next_level>)"
@@ -270,7 +271,9 @@ upgrade_items:
       - "<gray>Your value: <green><current_value>"
       - ""
       - "<upgrade_stats>"
-      - "<gray>Damage Bonus: <red><damage_bonus> <dark_gray>-> <red><next_damage_bonus>"
+      - "<gray>Damage Bonus: <red>+<damage_bonus> <dark_gray>-> <red>+<next_damage_bonus>"
+      - "<gray>Skill Cooldown: <aqua>-<skill_cooldown_bonus>s <dark_gray>-> <aqua>-<next_skill_cooldown_bonus>s"
+      - "<gray>Attack Speed: <yellow>-<attack_speed_bonus>s <dark_gray>-> <yellow>-<next_attack_speed_bonus>s"
       - ""
       - "<yellow>Click to upgrade!"
 
@@ -290,12 +293,14 @@ upgrade_items:
     name: "<green><upgrade>"
     glow: true
     hide_attributes: true
-    stats_format: "<gray><stat> Bonus: <green><stat_bonus> <dark_gray>-> <green><next_stat_bonus>"
+    stats_format: "<gray><stat> Bonus: <green>+<stat_bonus> <dark_gray>-> <green>+<next_stat_bonus>"
     lore:
       - ""
       - "<gray>Level: <gold><level>/<max_level>"
       - "<upgrade_stats>"
-      - "<gray>Damage Bonus: <red><damage_bonus>"
+      - "<gray>Damage Bonus: <red>+<damage_bonus>"
+      - "<gray>Skill Cooldown: <aqua>-<skill_cooldown_bonus>s"
+      - "<gray>Attack Speed: <yellow>-<attack_speed_bonus>s"
       - ""
       - "<gold>MAXED"
 

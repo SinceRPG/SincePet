@@ -35,6 +35,8 @@ upgrades:
         max-value: 10.0
         formula: "3 * <upgrade_level>"
     damage_bonus_formula: "1 * <upgrade_level>"
+    skill_cooldown_formula: "0.1 * <upgrade_level>"
+    attack_speed_formula: "0.05 * <upgrade_level>"
     requirement:
       upgrading_points: "<current.pet.upgrading.points>"
       compare: ">="

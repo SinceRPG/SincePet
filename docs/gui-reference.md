@@ -42,11 +42,17 @@ This page contains reference lists for placeholders and bundled display mappings
 | `<requirement>`       | Friendly `requirement.display` text from `pets.yml`.  |
 | `<raw_requirement>`   | Raw condition such as `%playerpoints_points% >= 20`.  |
 | `<state>`             | `available`, `locked`, or `maxed`.                    |
-| `<stat_bonus>`        | Current stat upgrade bonus.                           |
-| `<next_stat_bonus>`   | Next level stat upgrade bonus.                        |
-| `<damage_bonus>`      | Current damage upgrade bonus.                         |
-| `<next_damage_bonus>` | Next level damage upgrade bonus.                      |
-| `<commands>`          | Commands configured for the upgrade, joined by comma. |
+| `<upgrade_stats>`           | Formatted list of stat upgrades using `stats_format`. |
+| `<stat>`                    | Friendly stat name (Used inside `stats_format` only). |
+| `<stat_bonus>`              | Current stat upgrade bonus (Used inside `stats_format` only). |
+| `<next_stat_bonus>`         | Next level stat upgrade bonus (Used inside `stats_format` only). |
+| `<damage_bonus>`            | Current damage upgrade bonus.                         |
+| `<next_damage_bonus>`       | Next level damage upgrade bonus.                      |
+| `<skill_cooldown_bonus>`    | Current skill cooldown reduction.                     |
+| `<next_skill_cooldown_bonus>` | Next skill cooldown reduction.                      |
+| `<attack_speed_bonus>`      | Current attack speed reduction.                       |
+| `<next_attack_speed_bonus>` | Next attack speed reduction.                          |
+| `<commands>`                | Commands configured for the upgrade, joined by comma. |
 
 ## Bundled Display Keys
 
@@ -77,6 +83,7 @@ Default stat display mappings:
 | `CRITICAL_STRIKE_POWER`  | Critical Strike Power  |
 | `HEALTH`                 | Health                 |
 | `HEALTH_REGENERATION`    | Health Regeneration    |
+| `LEGACY_ALL`             | All Stats              |
 | `MAGIC_DAMAGE`           | Magic Damage           |
 | `MAX_HEALTH`             | Max Health             |
 | `MOVEMENT_SPEED`         | Movement Speed         |

@@ -13,6 +13,8 @@ public record PetUpgrade(
         int cost,
         java.util.Map<String, PetData.PetStatData> stats,
         String damageFormula,
+        String skillCooldownFormula,
+        String attackSpeedFormula,
         String papi,
         String compare,
         String value,

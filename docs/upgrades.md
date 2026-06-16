@@ -17,6 +17,8 @@ upgrades:
         max-value: 10.0
         formula: "1.2 * <upgrade_level>"
     damage_bonus_formula: "4 * <upgrade_level>"
+    skill_cooldown_formula: "0.1 * <upgrade_level>"
+    attack_speed_formula: "0.2 * <upgrade_level>"
     requirement:
       papi: "%playerpoints_points%"
       compare: ">="
@@ -75,12 +77,16 @@ stats:
     max-value: 10.0
     formula: "1.2 * <upgrade_level>"
 damage_bonus_formula: "4 * <upgrade_level>"
+skill_cooldown_formula: "0.1 * <upgrade_level>"
+attack_speed_formula: "0.2 * <upgrade_level>"
 ```
 
-| Formula                | Used For                                |
-|------------------------|-----------------------------------------|
-| `stats`                | Map of MythicLib stat bonuses.          |
-| `damage_bonus_formula` | Adds to the pet's base attack damage.   |
+| Formula                  | Used For                                      |
+|--------------------------|-----------------------------------------------|
+| `stats`                  | Map of MythicLib stat bonuses.                |
+| `damage_bonus_formula`   | Adds to the pet's base attack damage.         |
+| `skill_cooldown_formula` | Reduces the cooldown of active/passive skills.|
+| `attack_speed_formula`   | Reduces the delay between auto-attacks.       |
 
 Available placeholders:
 

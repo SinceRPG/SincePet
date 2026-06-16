@@ -212,6 +212,8 @@ public class PetConfig {
                     section.getInt(path + "cost", 1),
                     stats,
                     section.getString(path + "damage_bonus_formula", "0"),
+                    section.getString(path + "skill_cooldown_formula", "0"),
+                    section.getString(path + "attack_speed_formula", "0"),
                     section.getString(path + "requirement.papi", section.getString(path + "requirement.upgrading_points", "")),
                     section.getString(path + "requirement.compare", ">="),
                     section.getString(path + "requirement.value", "0"),

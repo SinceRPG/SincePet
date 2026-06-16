@@ -169,9 +169,10 @@ public class PetAbilityManager {
 
     private void markUsed(Player p, PetData data, PetSkill ability) {
         if (ability.cooldown() <= 0) return;
+        double finalCooldown = Math.max(0.1, ability.cooldown() - plugin.getPetManager().getUpgradeBonus(p, data, "skill_cooldown", null));
         cooldowns
                 .computeIfAbsent(p.getUniqueId(), ignored -> new ConcurrentHashMap<>())
-                .put(getCooldownKey(data, ability), System.currentTimeMillis() + (long) (ability.cooldown() * 1000));
+                .put(getCooldownKey(data, ability), System.currentTimeMillis() + (long) (finalCooldown * 1000));
     }
 
     private String getCooldownKey(PetData data, PetSkill ability) {

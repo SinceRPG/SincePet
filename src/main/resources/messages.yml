@@ -75,7 +75,7 @@ pet:
       - ""
       - " <gray>Level: <white><level>"
       - " <gray>EXP: <green><current_exp> / <max_exp>"
-      - " <gray>Stat Bonus: <green>+<value> <stat>"
+      - "<stats>"
       - " <gray>DMG Inheritance: <green><inheritance>%"
       - " <gray>Passive Abilities:"
       - " <skill.passive.1> <dark_gray>[<yellow><skill.trigger.passive.1><dark_gray>]"

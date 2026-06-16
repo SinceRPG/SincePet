@@ -384,6 +384,14 @@ public class PetManager {
         return calculateUpgradeFormula(p, data, upgrade.damageFormula(), upgradeLevel);
     }
 
+    public double getUpgradeSkillCooldownBonus(Player p, PetData data, PetUpgrade upgrade, int upgradeLevel) {
+        return calculateUpgradeFormula(p, data, upgrade.skillCooldownFormula(), upgradeLevel);
+    }
+
+    public double getUpgradeAttackSpeedBonus(Player p, PetData data, PetUpgrade upgrade, int upgradeLevel) {
+        return calculateUpgradeFormula(p, data, upgrade.attackSpeedFormula(), upgradeLevel);
+    }
+
     public String getResolvedUpgradeRequirement(Player p, PetData data, PetUpgrade upgrade) {
         return resolvePlaceholders(p, data, upgrade.papi());
     }
@@ -781,7 +789,7 @@ public class PetManager {
         if (created != null) activePetNames.put(uuid, created);
     }
 
-    private double getUpgradeBonus(Player p, PetData data, String type, String statName) {
+    public double getUpgradeBonus(Player p, PetData data, String type, String statName) {
         var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
         if (s == null) return 0;
         double total = 0;
@@ -791,6 +799,10 @@ public class PetManager {
             String formula;
             if ("damage".equals(type)) {
                 formula = upgrade.damageFormula();
+            } else if ("skill_cooldown".equals(type)) {
+                formula = upgrade.skillCooldownFormula();
+            } else if ("attack_speed".equals(type)) {
+                formula = upgrade.attackSpeedFormula();
             } else {
                 PetData.PetStatData statData = upgrade.stats().getOrDefault(statName, upgrade.stats().get("LEGACY_ALL"));
                 if (statData != null) {
@@ -961,7 +973,8 @@ public class PetManager {
         long now = System.currentTimeMillis();
 
         // Verifying global cooldowns
-        if (now - lastAttackTime.getOrDefault(p.getUniqueId(), 0L) < (long) (data.cooldown() * 1000)) return;
+        double attackCooldown = Math.max(0.1, data.cooldown() - getUpgradeBonus(p, data, "attack_speed", null));
+        if (now - lastAttackTime.getOrDefault(p.getUniqueId(), 0L) < (long) (attackCooldown * 1000)) return;
 
         if (now - lastTargetCheckTime.getOrDefault(p.getUniqueId(), 0L) < settings.targetCheckMillis()) return;
         lastTargetCheckTime.put(p.getUniqueId(), now);

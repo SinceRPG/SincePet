@@ -253,9 +253,9 @@ public class PetGUI implements InventoryHolder {
                 new Placeholder("<stats>", statsDisplay),
                 new Placeholder("<formula>", ""), // Kept for backwards compat but empty
                 new Placeholder("<inheritance>", inheritanceStr),
-                new Placeholder("<skills>", getSkillSummary(gui, data, "all")),
-                new Placeholder("<active_skills>", getSkillSummary(gui, data, "active")),
-                new Placeholder("<passive_skills>", getSkillSummary(gui, data, "passive")),
+                new Placeholder("<skills>", getSkillSummary(p, gui, data, "all")),
+                new Placeholder("<active_skills>", getSkillSummary(p, gui, data, "active")),
+                new Placeholder("<passive_skills>", getSkillSummary(p, gui, data, "passive")),
                 new Placeholder("<status>", statusLine),
                 new Placeholder("<texture>", data.texture() == null ? "" : data.texture())
         ));
@@ -311,7 +311,7 @@ public class PetGUI implements InventoryHolder {
             String currDisp = formatNumber(currentBonus);
             String nextDisp = formatNumber(nextBonus);
             
-            String statName = "LEGACY_ALL".equals(statKey) ? "All Stats" : getDisplayValue(gui, "stats", statKey);
+            String statName = getDisplayValue(gui, "stats", statKey);
             statsLore.add(statFormat
                 .replace("<stat>", statName)
                 .replace("<stat_bonus>", currDisp)
@@ -339,6 +339,10 @@ public class PetGUI implements InventoryHolder {
                 new Placeholder("<upgrade_stats>", upgradeStatsDisplay),
                 new Placeholder("<damage_bonus>", formatNumber(plugin.getPetManager().getUpgradeDamageBonus(p, data, upgrade, level))),
                 new Placeholder("<next_damage_bonus>", formatNumber(plugin.getPetManager().getUpgradeDamageBonus(p, data, upgrade, nextLevel))),
+                new Placeholder("<skill_cooldown_bonus>", formatNumber(plugin.getPetManager().getUpgradeSkillCooldownBonus(p, data, upgrade, level))),
+                new Placeholder("<next_skill_cooldown_bonus>", formatNumber(plugin.getPetManager().getUpgradeSkillCooldownBonus(p, data, upgrade, nextLevel))),
+                new Placeholder("<attack_speed_bonus>", formatNumber(plugin.getPetManager().getUpgradeAttackSpeedBonus(p, data, upgrade, level))),
+                new Placeholder("<next_attack_speed_bonus>", formatNumber(plugin.getPetManager().getUpgradeAttackSpeedBonus(p, data, upgrade, nextLevel))),
                 new Placeholder("<commands>", String.join(", ", upgrade.commands()))
         ));
         placeholdersList.addAll(getSkillPlaceholders(gui, data));
@@ -576,7 +580,7 @@ public class PetGUI implements InventoryHolder {
         return value % 1 == 0 ? String.valueOf((int) value) : String.format("%.2f", value);
     }
 
-    private String getSkillSummary(ConfigUtils gui, PetData data, String type) {
+    private String getSkillSummary(Player p, ConfigUtils gui, PetData data, String type) {
         String format = gui.getString("collection.pet_item.skills.format", "<skill> (<triggers>)");
         String separator = gui.getString("collection.pet_item.skills.separator", ", ");
         String triggerSeparator = gui.getString("collection.pet_item.skills.trigger_separator", "/");
@@ -584,15 +588,18 @@ public class PetGUI implements InventoryHolder {
         List<String> skills = data.skills().stream()
                 .filter(PetSkill::enabled)
                 .filter(skill -> "all".equals(type) || skill.type().equalsIgnoreCase(type))
-                .map(skill -> format
+                .map(skill -> {
+                    double finalCooldown = p != null ? Math.max(0.1, skill.cooldown() - plugin.getPetManager().getUpgradeBonus(p, data, "skill_cooldown", null)) : skill.cooldown();
+                    return format
                         .replace("<id>", skill.id())
                         .replace("<skill>", getDisplayValue(gui, "skills", skill.id()))
                         .replace("<type>", getDisplayValue(gui, "skill_types", skill.type()))
                         .replace("<mythic_skill>", getDisplayValue(gui, "mythic_skills", skill.skillId()))
-                        .replace("<cooldown>", formatNumber(skill.cooldown()))
+                        .replace("<cooldown>", formatNumber(finalCooldown))
                         .replace("<triggers>", skill.triggers().stream()
                                 .map(trigger -> getDisplayValue(gui, "triggers", trigger))
-                                .collect(java.util.stream.Collectors.joining(triggerSeparator))))
+                                .collect(java.util.stream.Collectors.joining(triggerSeparator)));
+                })
                 .toList();
         if (skills.isEmpty()) return empty;
         return String.join(separator, skills);
