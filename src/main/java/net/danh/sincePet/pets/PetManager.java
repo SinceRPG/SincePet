@@ -982,7 +982,7 @@ public class PetManager {
 
         var target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range()).stream()
                 .filter(e -> e instanceof Monster && !e.isDead())
-                .filter(e -> !isMythicSummon(e))
+                .filter(e -> !isOwnerSummon(e, p.getUniqueId()))
                 .map(e -> (LivingEntity) e)
                 .min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation())))
                 .orElse(null);
@@ -1174,13 +1174,15 @@ public class PetManager {
         }
     }
 
-    private boolean isMythicSummon(Entity entity) {
+    private boolean isOwnerSummon(Entity entity, UUID ownerId) {
         if (Bukkit.getPluginManager().getPlugin("MythicMobs") == null) return false;
         try {
             var activeMob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId());
             if (activeMob.isPresent()) {
                 var mob = activeMob.get();
-                return mob.getOwner().isPresent() || mob.getParent().isPresent();
+                if (mob.getOwner().isPresent() && mob.getOwner().get().equals(ownerId)) {
+                    return true;
+                }
             }
         } catch (Exception ignored) {
         }
