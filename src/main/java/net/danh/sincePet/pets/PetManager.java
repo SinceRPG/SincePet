@@ -4,6 +4,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 import com.sk89q.worldguard.protection.flags.StateFlag;
+import io.lumine.mythic.bukkit.MythicBukkit;
 import io.lumine.mythic.lib.MythicLib;
 import io.lumine.mythic.lib.UtilityMethods;
 import io.lumine.mythic.lib.api.player.EquipmentSlot;
@@ -981,6 +982,7 @@ public class PetManager {
 
         var target = p.getWorld().getNearbyEntities(p.getLocation(), data.range(), data.range(), data.range()).stream()
                 .filter(e -> e instanceof Monster && !e.isDead())
+                .filter(e -> !isMythicSummon(e))
                 .map(e -> (LivingEntity) e)
                 .min(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(p.getLocation())))
                 .orElse(null);
@@ -1170,5 +1172,18 @@ public class PetManager {
             var xpMsg = getMsg("pet.level.xp_actionbar").replace("<amount>", String.format("%.1f", amount)).replace("<current_xp>", String.format("%.1f", newXp)).replace("<max_xp>", String.format("%.1f", maxXp));
             p.sendActionBar(ColorUtils.parse(xpMsg));
         }
+    }
+
+    private boolean isMythicSummon(Entity entity) {
+        if (Bukkit.getPluginManager().getPlugin("MythicMobs") == null) return false;
+        try {
+            var activeMob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId());
+            if (activeMob.isPresent()) {
+                var mob = activeMob.get();
+                return mob.getOwner().isPresent() || mob.getParent().isPresent();
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 }
