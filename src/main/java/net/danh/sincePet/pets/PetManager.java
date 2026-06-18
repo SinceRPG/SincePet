@@ -1180,8 +1180,12 @@ public class PetManager {
             var activeMob = MythicBukkit.inst().getMobManager().getActiveMob(entity.getUniqueId());
             if (activeMob.isPresent()) {
                 var mob = activeMob.get();
-                if (mob.getOwner().isPresent() && mob.getOwner().get().equals(ownerId)) {
-                    return true;
+                var ownerOpt = mob.getOwner();
+                if (ownerOpt.isPresent() && ownerId != null) {
+                    var ownerEntity = ownerOpt.get();
+                    if (ownerEntity != null && ownerId.equals(ownerEntity.getUniqueId())) {
+                        return true;
+                    }
                 }
             }
         } catch (Exception ignored) {
