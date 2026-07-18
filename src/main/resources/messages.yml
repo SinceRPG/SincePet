@@ -59,6 +59,7 @@ pet:
     success: "<green>Upgraded <upgrade> <green>to level <level>."
     maxed: "<red>This upgrade is already maxed."
     requirement_failed: "<red>You do not meet the upgrade requirement."
+    reset_success: "<green>All upgrade points have been successfully reset."
 
   gui:
     title: "<black><bold>Pet Collection <gray>(Page <page>)"

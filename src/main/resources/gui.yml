@@ -202,6 +202,16 @@ buttons:
     material: "ARROW"
     name: "<yellow>Next Page"
 
+  reset_upgrades:
+    slot: 50
+    material: "REDSTONE_BLOCK"
+    name: "<red><b>Reset Upgrades"
+    lore:
+      - "<gray>Click to reset all upgrading points."
+    display:
+      conditions:
+        - "active_pet"
+
 detail:
   buttons:
     back:

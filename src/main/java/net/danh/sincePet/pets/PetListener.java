@@ -103,6 +103,15 @@ public class PetListener implements Listener {
                     new PetGUI(plugin, 1, PetGUI.View.DETAIL).open(p);
                     return;
                 }
+                if (slot == guiConfig.getInt("buttons.reset_upgrades.slot", 50)) {
+                    if (!gui.isActionVisible(p, "buttons.reset_upgrades")) return;
+                    PetData active = plugin.getPetManager().getActivePetData(p);
+                    if (active != null) {
+                        plugin.getPetManager().resetUpgradePoints(p, active);
+                        new PetGUI(plugin, 1, PetGUI.View.UPGRADES).open(p);
+                    }
+                    return;
+                }
                 PetData active = plugin.getPetManager().getActivePetData(p);
                 if (active == null) return;
                 for (PetUpgrade upgrade : active.upgrades()) {

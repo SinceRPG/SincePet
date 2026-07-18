@@ -824,6 +824,25 @@ public class PetManager {
         return total;
     }
 
+    public void resetUpgradePoints(Player p, PetData data) {
+        var s = plugin.getPlayerDataHandler().getSession(p.getUniqueId());
+        if (s == null) return;
+        boolean changed = false;
+        for (PetUpgrade upgrade : data.upgrades()) {
+            if (s.getUpgradeLevel(data.id(), upgrade.id()) > 0) {
+                s.setUpgradeLevel(data.id(), upgrade.id(), 0);
+                changed = true;
+            }
+        }
+        if (changed) {
+            applyStat(p, data, false);
+            activeBuffs.remove(p.getUniqueId());
+            updateStatStatus(p, data);
+            plugin.getPlayerDataHandler().saveData(p.getUniqueId(), false);
+            p.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.upgrade.reset_success")));
+        }
+    }
+
     public int getAvailableUpgradePoints(Player p, PetData data) {
         int earned = getTotalEarnedUpgradePoints(p, data);
         int used = getUsedUpgradePoints(p, data);

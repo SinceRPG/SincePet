@@ -157,6 +157,7 @@ public class PetGUI implements InventoryHolder {
         this.inv = Bukkit.createInventory(this, 54, ColorUtils.parse(messages.getString("pet.gui.upgrades_title", "<black><bold>Pet Upgrades")));
         setBorder(p, gui);
         setButton(p, gui, "detail.buttons.back_detail", 49, inv);
+        setButton(p, gui, "buttons.reset_upgrades", 50, inv);
         if (data != null) {
             for (PetUpgrade upgrade : data.upgrades()) {
                 int level = plugin.getPetManager().getUpgradeLevel(p, data, upgrade);
