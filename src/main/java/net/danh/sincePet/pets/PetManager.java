@@ -317,6 +317,20 @@ public class PetManager {
             sender.sendMessage(ColorUtils.parseWithPrefix(getMsg("pet.command.levelup_other").replace("<target>", target.getName()).replace("<level>", String.valueOf(newLv))));
     }
 
+    public void setPetLevel(Player target, String petId, int newLv) {
+        var s = plugin.getPlayerDataHandler().getSession(target.getUniqueId());
+        if (s == null) return;
+        s.setLevel(petId, newLv);
+        if (petId.equals(s.getActivePetId())) {
+            var data = activePetData.get(target.getUniqueId());
+            if (data != null) {
+                updateStatStatus(target, data);
+                TextDisplay name = activePetNames.get(target.getUniqueId());
+                if (name != null) updatePetName(name, data, newLv);
+            }
+        }
+    }
+
     public void updateInput(Player p, float f, float s, boolean jump, boolean sneak) {
         if (activePets.containsKey(p.getUniqueId()))
             playerInputs.put(p.getUniqueId(), new float[]{f, s, jump ? 1.0f : 0.0f, sneak ? 1.0f : 0.0f});
